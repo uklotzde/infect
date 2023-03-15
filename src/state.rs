@@ -89,9 +89,9 @@ where
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IntentHandled<Effect, Task> {
+pub enum IntentHandled<Intent, Effect, Task> {
     Accepted(Option<Action<Effect, Task>>),
-    Rejected,
+    Rejected(Intent),
 }
 
 pub trait State {
@@ -100,7 +100,7 @@ pub trait State {
     type Task;
 
     #[must_use]
-    fn handle_intent(&self, intent: Self::Intent) -> IntentHandled<Self::Effect, Self::Task>;
+    fn handle_intent(&self, intent: Self::Intent) -> IntentHandled<Self::Intent, Self::Effect, Self::Task>;
 
     #[must_use]
     fn update(&mut self, effect: Self::Effect) -> StateUpdated<Self::Effect, Self::Task>;

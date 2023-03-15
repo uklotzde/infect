@@ -84,7 +84,10 @@ where
             Message::Intent(intent) => {
                 let next_action = match state.handle_intent(intent) {
                     IntentHandled::Accepted(next_action) => next_action,
-                    IntentHandled::Rejected => None,
+                    IntentHandled::Rejected(intent) => {
+                        log::debug!("Discarding {intent:?} rejected by {state:?}");
+                        None
+                    }
                 };
                 StateUpdated::unchanged(next_action)
             }
