@@ -135,7 +135,7 @@ where
     }
 }
 
-pub async fn message_loop<S, T, R>(
+pub async fn message_loop<S, T>(
     shared_task_dispatcher: Arc<T>,
     (mut message_tx, mut message_rx): MessageChannel<S::Intent, S::Effect>,
     mut state: S,
