@@ -55,24 +55,24 @@ pub fn send_message<Intent: fmt::Debug, Effect: fmt::Debug>(
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum MessageHandled {
+pub enum MessageHandled {
     Progressing,
     NoProgress,
 }
 
-fn handle_next_message<E, S>(
-    shared_env: &Arc<E>,
+pub fn handle_next_message<S, T>(
+    shared_task_dispatcher: &Arc<T>,
     state: &mut S,
     message_tx: &mut MessageSender<S::Intent, S::Effect>,
     mut next_message: Message<S::Intent, S::Effect>,
     render_fn: &mut RenderStateFn<S, S::Intent>,
 ) -> MessageHandled
 where
-    E: TaskDispatcher<Intent = S::Intent, Effect = S::Effect, Task = S::Task>,
     S: State + fmt::Debug,
     S::Intent: fmt::Debug + Send + 'static,
     S::Effect: fmt::Debug + Send + 'static,
     S::Task: fmt::Debug + 'static,
+    T: TaskDispatcher<Intent = S::Intent, Effect = S::Effect, Task = S::Task>,
 {
     let mut state_changed = StateChanged::Unchanged;
     let mut number_of_next_actions = 0;
@@ -94,7 +94,11 @@ where
                 }
                 Action::DispatchTask(task) => {
                     log::debug!("Dispatching task asynchronously: {task:?}");
-                    shared_env.dispatch_task(shared_env.clone(), message_tx.clone(), task);
+                    shared_task_dispatcher.dispatch_task(
+                        Arc::clone(shared_task_dispatcher),
+                        message_tx.clone(),
+                        task,
+                    );
                     number_of_tasks_dispatched += 1;
                 }
             }
@@ -117,22 +121,22 @@ where
     }
 }
 
-pub async fn message_loop<E, S>(
-    shared_env: Arc<E>,
+pub async fn message_loop<S, T>(
+    shared_task_dispatcher: &Arc<T>,
     (mut message_tx, mut message_rx): MessageChannel<S::Intent, S::Effect>,
     mut state: S,
     mut render_state_fn: Box<RenderStateFn<S, S::Intent>>,
 ) -> S
 where
-    E: TaskDispatcher<Intent = S::Intent, Effect = S::Effect, Task = S::Task>,
     S: State + fmt::Debug,
     S::Intent: fmt::Debug + Send + 'static,
     S::Effect: fmt::Debug + Send + 'static,
     S::Task: fmt::Debug + 'static,
+    T: TaskDispatcher<Intent = S::Intent, Effect = S::Effect, Task = S::Task>,
 {
     while let Some(next_message) = message_rx.next().await {
         match handle_next_message(
-            &shared_env,
+            shared_task_dispatcher,
             &mut state,
             &mut message_tx,
             next_message,
@@ -140,7 +144,7 @@ where
         ) {
             MessageHandled::Progressing => (),
             MessageHandled::NoProgress => {
-                if shared_env.all_tasks_finished() {
+                if shared_task_dispatcher.all_tasks_finished() {
                     break;
                 }
             }
