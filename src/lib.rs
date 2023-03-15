@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: The infect authors
 // SPDX-License-Identifier: MPL-2.0
 
-//! infect - Intent/Action/Effect
-
+#![allow(rustdoc::invalid_rust_codeblocks)]
+#![doc = include_str!("../README.md")]
 #![warn(rust_2018_idioms)]
 #![warn(rust_2021_compatibility)]
 #![warn(missing_debug_implementations)]
