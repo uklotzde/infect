@@ -10,6 +10,7 @@ pub trait TaskDispatcher {
     type Effect;
     type Task;
 
+    #[must_use]
     fn all_tasks_finished(&self) -> bool;
 
     fn dispatch_task(

@@ -60,6 +60,7 @@ pub enum MessageHandled {
     NoProgress,
 }
 
+#[must_use]
 pub fn handle_next_message<S, T>(
     shared_task_dispatcher: &Arc<T>,
     state: &mut S,

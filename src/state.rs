@@ -51,6 +51,7 @@ pub struct StateUpdated<Effect, Task> {
 }
 
 impl<Effect, Task> StateUpdated<Effect, Task> {
+    #[must_use]
     pub fn unchanged(next_action: impl Into<Option<Action<Effect, Task>>>) -> Self {
         Self {
             changed: StateChanged::Unchanged,
@@ -58,6 +59,7 @@ impl<Effect, Task> StateUpdated<Effect, Task> {
         }
     }
 
+    #[must_use]
     pub fn maybe_changed(next_action: impl Into<Option<Action<Effect, Task>>>) -> Self {
         Self {
             changed: StateChanged::MaybeChanged,
@@ -66,7 +68,8 @@ impl<Effect, Task> StateUpdated<Effect, Task> {
     }
 }
 
-pub fn state_updated<E1, E2, T1, T2>(from: StateUpdated<E1, T1>) -> StateUpdated<E2, T2>
+#[must_use]
+pub fn state_updated<E1, T1, E2, T2>(from: StateUpdated<E1, T1>) -> StateUpdated<E2, T2>
 where
     E1: Into<E2>,
     T1: Into<T2>,
@@ -90,6 +93,7 @@ pub trait State {
     type Effect;
     type Task;
 
+    #[must_use]
     fn update(
         &mut self,
         message: Message<Self::Intent, Self::Effect>,
