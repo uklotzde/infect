@@ -35,7 +35,7 @@ pub use self::messaging::{
 };
 
 pub mod state;
-pub use self::state::{state_updated, RenderStateFn, State, StateChanged, StateUpdated};
+pub use self::state::{state_updated, State, StateChanged, StateUpdated};
 
 pub mod task;
 pub use self::task::TaskDispatcher;

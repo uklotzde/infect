@@ -7,7 +7,7 @@ use futures::{channel::mpsc, StreamExt as _};
 
 use crate::{
     action::Action,
-    state::{IntentHandled, RenderStateFn, State, StateChanged, StateUpdated},
+    state::{IntentHandled, State, StateChanged, StateUpdated},
     Message, TaskDispatcher,
 };
 
@@ -66,7 +66,7 @@ pub fn handle_next_message<S, T>(
     state: &mut S,
     message_tx: &mut MessageSender<S::Intent, S::Effect>,
     mut next_message: Message<S::Intent, S::Effect>,
-    render_fn: &mut RenderStateFn<S, S::Intent>,
+    render_state_fn: impl FnOnce(&S) -> Option<S::Intent>,
 ) -> MessageHandled
 where
     S: State + fmt::Debug,
@@ -119,7 +119,7 @@ where
         }
         if state_changed == StateChanged::MaybeChanged || number_of_next_actions > 0 {
             log::debug!("Rendering current state: {state:?}");
-            if let Some(observation_intent) = render_fn(state) {
+            if let Some(observation_intent) = render_state_fn(state) {
                 log::debug!("Received intent after observing state: {observation_intent:?}");
                 send_message(message_tx, Message::Intent(observation_intent));
                 number_of_messages_sent += 1;
@@ -135,11 +135,11 @@ where
     }
 }
 
-pub async fn message_loop<S, T>(
+pub async fn message_loop<S, T, R>(
     shared_task_dispatcher: Arc<T>,
     (mut message_tx, mut message_rx): MessageChannel<S::Intent, S::Effect>,
     mut state: S,
-    mut render_state_fn: Box<RenderStateFn<S, S::Intent>>,
+    mut render_state_fn: impl FnMut(&S) -> Option<S::Intent>,
 ) -> S
 where
     S: State + fmt::Debug,
@@ -155,7 +155,7 @@ where
             &mut state,
             &mut message_tx,
             next_message,
-            &mut *render_state_fn,
+            &mut render_state_fn,
         ) {
             MessageHandled::Progressing => (),
             MessageHandled::NoProgress => {
