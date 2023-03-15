@@ -109,4 +109,4 @@ pub trait State {
     fn update(&mut self, effect: Self::Effect) -> StateUpdated<Self::Effect, Self::Task>;
 }
 
-pub type RenderStateFn<State, Intent> = dyn FnMut(&State) -> Option<Intent> + Send + Sync + 'static;
+pub type RenderStateFn<State, Intent> = dyn FnMut(&State) -> Option<Intent>;
