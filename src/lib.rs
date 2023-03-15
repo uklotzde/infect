@@ -22,6 +22,15 @@
 #![allow(missing_docs)]
 
 pub mod action;
+pub use self::action::Action;
+
 pub mod message;
-pub mod messaging;
+pub use self::message::{
+    message_channel, message_loop, Message, MessageChannel, MessageReceiver, MessageSender,
+};
+
 pub mod state;
+pub use self::state::{state_updated, RenderStateFn, State, StateChanged, StateUpdated};
+
+pub mod task;
+pub use self::task::TaskDispatcher;
