@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: The infect authors
+# SPDX-License-Identifier: MPL-2.0
+
+[package]
+name = "infect"
+description = "Intent/Action/Effect"
+version = "0.0.0"
+license = "MPL-2.0"
+readme = "README.md"
+repository = "https://github.com/uklotzde/infect"
+keywords = []
+categories = []
+edition = "2021"
+
+[dependencies]
+futures = { version = "0.3.27", default-features = false, features = ["std"] }
+log = "0.4.17"
