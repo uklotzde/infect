@@ -96,4 +96,4 @@ pub trait State {
     ) -> StateUpdated<Self::Effect, Self::Task>;
 }
 
-pub type RenderStateFn<State, Intent> = dyn FnMut(&State) -> Option<Intent> + Send;
+pub type RenderStateFn<State, Intent> = dyn FnMut(&State) -> Option<Intent> + Send + Sync + 'static;

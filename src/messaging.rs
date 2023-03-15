@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: The infect authors
 // SPDX-License-Identifier: MPL-2.0
 
-use std::{fmt, sync::Arc};
+use std::{fmt, future::Future, sync::Arc};
 
 use futures::{channel::mpsc, StreamExt as _};
 
@@ -121,35 +121,42 @@ where
     }
 }
 
-pub async fn message_loop<S, T>(
-    shared_task_dispatcher: &Arc<T>,
+#[allow(clippy::manual_async_fn)] // Intentional to verify the explicit trait bounds at compile time
+pub fn message_loop<S, T>(
+    shared_task_dispatcher: Arc<T>,
     (mut message_tx, mut message_rx): MessageChannel<S::Intent, S::Effect>,
     mut state: S,
     mut render_state_fn: Box<RenderStateFn<S, S::Intent>>,
-) -> S
+) -> impl Future<Output = S> + Send + 'static
 where
-    S: State + fmt::Debug,
+    S: State + fmt::Debug + Send + 'static,
     S::Intent: fmt::Debug + Send + 'static,
     S::Effect: fmt::Debug + Send + 'static,
-    S::Task: fmt::Debug + 'static,
-    T: TaskDispatcher<Intent = S::Intent, Effect = S::Effect, Task = S::Task>,
+    S::Task: fmt::Debug + Send + 'static,
+    T: TaskDispatcher<Intent = S::Intent, Effect = S::Effect, Task = S::Task>
+        + Send
+        + Sync
+        + 'static,
 {
-    while let Some(next_message) = message_rx.next().await {
-        match handle_next_message(
-            shared_task_dispatcher,
-            &mut state,
-            &mut message_tx,
-            next_message,
-            &mut *render_state_fn,
-        ) {
-            MessageHandled::Progressing => (),
-            MessageHandled::NoProgress => {
-                if shared_task_dispatcher.all_tasks_finished() {
-                    break;
+    async move {
+        log::debug!("Starting message loop");
+        while let Some(next_message) = message_rx.next().await {
+            match handle_next_message(
+                &shared_task_dispatcher,
+                &mut state,
+                &mut message_tx,
+                next_message,
+                &mut *render_state_fn,
+            ) {
+                MessageHandled::Progressing => (),
+                MessageHandled::NoProgress => {
+                    if shared_task_dispatcher.all_tasks_finished() {
+                        break;
+                    }
                 }
             }
         }
+        log::debug!("Terminating message loop");
+        state
     }
-    log::debug!("Terminated message loop");
-    state
 }
