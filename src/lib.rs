@@ -25,8 +25,11 @@ pub mod action;
 pub use self::action::Action;
 
 pub mod message;
-pub use self::message::{
-    message_channel, message_loop, Message, MessageChannel, MessageReceiver, MessageSender,
+pub use self::message::Message;
+
+pub mod messaging;
+pub use self::messaging::{
+    message_channel, message_loop, send_message, MessageChannel, MessageReceiver, MessageSender,
 };
 
 pub mod state;

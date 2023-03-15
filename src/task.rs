@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use crate::message::MessageSender;
+use crate::MessageSender;
 
 pub trait TaskDispatcher {
     type Intent;
