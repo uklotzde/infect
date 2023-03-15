@@ -7,7 +7,7 @@ use futures::{channel::mpsc, StreamExt as _};
 
 use crate::{
     action::Action,
-    state::{RenderStateFn, State, StateChanged, StateUpdated},
+    state::{IntentHandled, RenderStateFn, State, StateChanged, StateUpdated},
     Message, TaskDispatcher,
 };
 
@@ -80,10 +80,20 @@ where
     let mut number_of_messages_sent = 0;
     let mut number_of_tasks_dispatched = 0;
     'process_next_message: loop {
+        let state_updated = match next_message {
+            Message::Intent(intent) => {
+                let next_action = match state.handle_intent(intent) {
+                    IntentHandled::Accepted(next_action) => next_action,
+                    IntentHandled::Rejected => None,
+                };
+                StateUpdated::unchanged(next_action)
+            }
+            Message::Effect(effect) => state.update(effect),
+        };
         let StateUpdated {
             changed: next_state_changed,
             next_action,
-        } = state.update(next_message);
+        } = state_updated;
         state_changed += next_state_changed;
         if let Some(next_action) = next_action {
             number_of_next_actions += 1;

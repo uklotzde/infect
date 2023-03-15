@@ -3,7 +3,7 @@
 
 use std::ops::{Add, AddAssign};
 
-use crate::{action::Action, message::Message};
+use crate::action::Action;
 
 /// Perceptible effect when updating the state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,16 +88,22 @@ where
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntentHandled<Effect, Task> {
+    Accepted(Option<Action<Effect, Task>>),
+    Rejected,
+}
+
 pub trait State {
     type Intent;
     type Effect;
     type Task;
 
     #[must_use]
-    fn update(
-        &mut self,
-        message: Message<Self::Intent, Self::Effect>,
-    ) -> StateUpdated<Self::Effect, Self::Task>;
+    fn handle_intent(&self, intent: Self::Intent) -> IntentHandled<Self::Effect, Self::Task>;
+
+    #[must_use]
+    fn update(&mut self, effect: Self::Effect) -> StateUpdated<Self::Effect, Self::Task>;
 }
 
 pub type RenderStateFn<State, Intent> = dyn FnMut(&State) -> Option<Intent> + Send + Sync + 'static;
