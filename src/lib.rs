@@ -30,7 +30,8 @@ pub use self::message::Message;
 
 pub mod messaging;
 pub use self::messaging::{
-    message_channel, message_loop, send_message, MessageChannel, MessageReceiver, MessageSender,
+    handle_next_message, message_channel, message_loop, send_message, MessageChannel,
+    MessageHandled, MessageReceiver, MessageSender,
 };
 
 pub mod state;
