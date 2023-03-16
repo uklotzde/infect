@@ -19,26 +19,26 @@ pub struct EffectApplied<Effect, Task> {
 
 impl<Effect, Task> EffectApplied<Effect, Task> {
     #[must_use]
-    pub fn unchanged<E, T>(next_action: impl Into<Option<Action<E, T>>>) -> Self
+    pub fn unchanged<E, T>(next_action: Option<Action<E, T>>) -> Self
     where
         E: Into<Effect>,
         T: Into<Task>,
     {
         Self {
             model_changed: ModelChanged::Unchanged,
-            next_action: next_action.into().map(Action::map_from),
+            next_action: next_action.map(Action::map_from),
         }
     }
 
     #[must_use]
-    pub fn maybe_changed<E, T>(next_action: impl Into<Option<Action<E, T>>>) -> Self
+    pub fn maybe_changed<E, T>(next_action: Option<Action<E, T>>) -> Self
     where
         E: Into<Effect>,
         T: Into<Task>,
     {
         Self {
             model_changed: ModelChanged::MaybeChanged,
-            next_action: next_action.into().map(Action::map_from),
+            next_action: next_action.map(Action::map_from),
         }
     }
 
