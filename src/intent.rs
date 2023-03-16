@@ -36,4 +36,13 @@ impl<Intent, Effect, Task> IntentHandled<Intent, Effect, Task> {
             IntentHandled::Rejected(intent) => Self::Rejected(intent.into()),
         }
     }
+
+    pub fn map_into<I, E, T>(self) -> IntentHandled<I, E, T>
+    where
+        I: From<Intent>,
+        E: From<Effect>,
+        T: From<Task>,
+    {
+        IntentHandled::map_from(self)
+    }
 }

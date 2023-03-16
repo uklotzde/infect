@@ -18,6 +18,14 @@ impl<Effect, Task> Action<Effect, Task> {
             Action::DispatchTask(task) => Self::DispatchTask(task.into()),
         }
     }
+
+    pub fn map_into<E, T>(self) -> Action<E, T>
+    where
+        E: From<Effect>,
+        T: From<Task>,
+    {
+        Action::map_from(self)
+    }
 }
 
 impl<Effect, Task> Action<Effect, Task> {

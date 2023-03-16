@@ -77,4 +77,12 @@ impl<Effect, Task> EffectApplied<Effect, Task> {
             next_action,
         }
     }
+
+    pub fn map_into<E, T>(self) -> EffectApplied<E, T>
+    where
+        E: From<Effect>,
+        T: From<Task>,
+    {
+        EffectApplied::map_from(self)
+    }
 }
