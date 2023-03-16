@@ -10,12 +10,12 @@ pub enum IntentHandled<Intent, Effect, Task> {
 }
 
 impl<Intent, Effect, Task> IntentHandled<Intent, Effect, Task> {
-    pub fn accepted<E, T>(action: Option<Action<E, T>>) -> Self
+    pub fn accepted<E, T>(action: impl Into<Option<Action<E, T>>>) -> Self
     where
         E: Into<Effect>,
         T: Into<Task>,
     {
-        Self::Accepted(action.map(Action::map_from))
+        Self::Accepted(action.into().map(Action::map_from))
     }
 
     pub fn rejected<I>(intent: I) -> Self
