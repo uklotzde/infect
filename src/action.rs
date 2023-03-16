@@ -8,13 +8,26 @@ pub enum Action<Effect, Task> {
 }
 
 impl<Effect, Task> Action<Effect, Task> {
-    /// Apply an effect immediately.
+    pub fn map_from<E, T>(from: Action<E, T>) -> Self
+    where
+        E: Into<Effect>,
+        T: Into<Task>,
+    {
+        match from {
+            Action::ApplyEffect(effect) => Self::ApplyEffect(effect.into()),
+            Action::DispatchTask(task) => Self::DispatchTask(task.into()),
+        }
+    }
+}
+
+impl<Effect, Task> Action<Effect, Task> {
+    /// Create a new action that applies an effect.
     #[must_use]
     pub fn apply_effect(effect: impl Into<Effect>) -> Self {
         Self::ApplyEffect(effect.into())
     }
 
-    /// Trigger side-effects by dispatching a task.
+    /// Create a new action that dispatches a task.
     #[must_use]
     pub fn dispatch_task(task: impl Into<Task>) -> Self {
         Self::DispatchTask(task.into())

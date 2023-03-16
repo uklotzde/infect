@@ -25,6 +25,12 @@
 pub mod action;
 pub use self::action::Action;
 
+pub mod effect;
+pub use self::effect::EffectApplied;
+
+pub mod intent;
+pub use self::intent::IntentHandled;
+
 pub mod message;
 pub use self::message::Message;
 
@@ -35,9 +41,7 @@ pub use self::messaging::{
 };
 
 pub mod model;
-pub use self::model::{
-    effect_applied, EffectApplied, IntentHandled, Model, ModelChanged, RenderModel,
-};
+pub use self::model::{Model, ModelChanged, RenderModel};
 
 pub mod task;
 pub use self::task::{TaskContext, TaskDispatcher};
