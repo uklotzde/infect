@@ -42,12 +42,24 @@ pub trait Model {
     type Effect;
     type Task;
 
+    /// Handle an intent
+    ///
+    /// Intents are comparable to commands. If accepted they might
+    /// trigger (immediate) effects or side-effects.
+    ///
+    /// The model remains unchanged if an intent is rejected and
+    /// returned to the caller.
     #[must_use]
     fn handle_intent(
         &self,
         intent: Self::Intent,
     ) -> IntentHandled<Self::Intent, Self::Effect, Self::Task>;
 
+    /// Apply an effect on the model
+    ///
+    /// Ideally, applying effects is deterministic. In this case recording
+    /// and replaying the sequence of effects is sufficient for reconstructing
+    /// each intermediate state of the model.
     #[must_use]
     fn apply_effect(&mut self, effect: Self::Effect) -> EffectApplied<Self::Effect, Self::Task>;
 }
