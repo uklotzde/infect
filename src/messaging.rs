@@ -70,8 +70,8 @@ pub fn process_next_message<M, R, T>(
 where
     R: RenderModel<Model = M>,
     M: Model + fmt::Debug,
-    M::Intent: fmt::Debug + Clone,
-    M::Effect: fmt::Debug + Clone,
+    M::Intent: fmt::Debug,
+    M::Effect: fmt::Debug,
     M::Task: fmt::Debug,
     T: TaskDispatcher<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
 {
@@ -147,8 +147,8 @@ pub async fn message_loop<M, R, T>(
     render_model: &mut R,
 ) where
     M: Model + fmt::Debug,
-    M::Intent: fmt::Debug + Clone,
-    M::Effect: fmt::Debug + Clone,
+    M::Intent: fmt::Debug,
+    M::Effect: fmt::Debug,
     M::Task: fmt::Debug,
     R: RenderModel<Model = M>,
     T: TaskDispatcher<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,

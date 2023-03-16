@@ -5,10 +5,26 @@ use std::{rc::Rc, sync::Arc};
 
 use crate::MessageSender;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TaskContext<TaskDispatcher, Intent, Effect> {
     pub task_dispatcher: TaskDispatcher,
     pub message_tx: MessageSender<Intent, Effect>,
+}
+
+impl<TaskDispatcher, Intent, Effect> Clone for TaskContext<TaskDispatcher, Intent, Effect>
+where
+    TaskDispatcher: Clone,
+{
+    fn clone(&self) -> Self {
+        let Self {
+            task_dispatcher,
+            message_tx,
+        } = self;
+        Self {
+            task_dispatcher: task_dispatcher.clone(),
+            message_tx: message_tx.clone(),
+        }
+    }
 }
 
 pub trait TaskDispatcher<T> {
