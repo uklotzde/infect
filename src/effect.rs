@@ -18,6 +18,7 @@ pub struct EffectApplied<Effect, Task> {
 }
 
 impl<Effect, Task> EffectApplied<Effect, Task> {
+    /// Mark the model as unchanged.
     #[must_use]
     pub fn unchanged<E, T>(next_action: impl Into<Option<Action<E, T>>>) -> Self
     where
@@ -30,6 +31,16 @@ impl<Effect, Task> EffectApplied<Effect, Task> {
         }
     }
 
+    /// Mark the model as unchanged and terminate the actions sequence.
+    #[must_use]
+    pub const fn unchanged_done() -> Self {
+        Self {
+            model_changed: ModelChanged::Unchanged,
+            next_action: None,
+        }
+    }
+
+    /// Mark the model as maybe changed.
     #[must_use]
     pub fn maybe_changed<E, T>(next_action: impl Into<Option<Action<E, T>>>) -> Self
     where
@@ -39,6 +50,15 @@ impl<Effect, Task> EffectApplied<Effect, Task> {
         Self {
             model_changed: ModelChanged::MaybeChanged,
             next_action: next_action.into().map(Action::map_from),
+        }
+    }
+
+    /// Mark the model as maybe changed and terminate the actions sequence.
+    #[must_use]
+    pub const fn maybe_changed_done() -> Self {
+        Self {
+            model_changed: ModelChanged::MaybeChanged,
+            next_action: None,
         }
     }
 
