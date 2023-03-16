@@ -3,7 +3,7 @@
 
 use std::ops::{Add, AddAssign};
 
-use crate::action::Action;
+use crate::Action;
 
 /// Perceptible effect when updating the state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,4 +107,11 @@ pub trait State {
 
     #[must_use]
     fn update(&mut self, effect: Self::Effect) -> StateUpdated<Self::Effect, Self::Task>;
+}
+
+pub trait RenderState {
+    type State: State;
+
+    #[must_use]
+    fn render_state(&mut self, state: &Self::State) -> Option<<Self::State as State>::Intent>;
 }

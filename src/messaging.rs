@@ -6,9 +6,7 @@ use std::{fmt, sync::Arc};
 use futures::{channel::mpsc, StreamExt as _};
 
 use crate::{
-    action::Action,
-    state::{IntentHandled, State, StateChanged, StateUpdated},
-    Message, TaskDispatcher,
+    Action, IntentHandled, Message, RenderState, State, StateChanged, StateUpdated, TaskDispatcher,
 };
 
 pub type MessageSender<Intent, Effect> = mpsc::Sender<Message<Intent, Effect>>;
@@ -61,14 +59,15 @@ pub enum MessageHandled {
 }
 
 #[must_use]
-pub fn handle_next_message<S, T>(
-    shared_task_dispatcher: &Arc<T>,
+pub fn handle_next_message<R, S, T>(
     state: &mut S,
+    render_state: &mut R,
+    shared_task_dispatcher: &Arc<T>,
     message_tx: &mut MessageSender<S::Intent, S::Effect>,
     mut next_message: Message<S::Intent, S::Effect>,
-    render_state_fn: impl FnOnce(&S) -> Option<S::Intent>,
 ) -> MessageHandled
 where
+    R: RenderState<State = S>,
     S: State + fmt::Debug,
     S::Intent: fmt::Debug,
     S::Effect: fmt::Debug,
@@ -119,7 +118,7 @@ where
         }
         if state_changed == StateChanged::MaybeChanged || number_of_next_actions > 0 {
             log::debug!("Rendering current state: {state:?}");
-            if let Some(observation_intent) = render_state_fn(state) {
+            if let Some(observation_intent) = render_state.render_state(state) {
                 log::debug!("Received intent after observing state: {observation_intent:?}");
                 send_message(message_tx, Message::Intent(observation_intent));
                 number_of_messages_sent += 1;
@@ -135,27 +134,28 @@ where
     }
 }
 
-pub async fn message_loop<S, T>(
+pub async fn message_loop<S, R, T>(
+    mut state: S,
+    mut render_state: R,
     shared_task_dispatcher: Arc<T>,
     (mut message_tx, mut message_rx): MessageChannel<S::Intent, S::Effect>,
-    mut state: S,
-    mut render_state_fn: impl FnMut(&S) -> Option<S::Intent>,
-) -> S
+) -> (S, R)
 where
     S: State + fmt::Debug,
     S::Intent: fmt::Debug,
     S::Effect: fmt::Debug,
     S::Task: fmt::Debug,
+    R: RenderState<State = S>,
     T: TaskDispatcher<Intent = S::Intent, Effect = S::Effect, Task = S::Task>,
 {
     log::debug!("Starting message loop");
     while let Some(next_message) = message_rx.next().await {
         match handle_next_message(
-            &shared_task_dispatcher,
             &mut state,
+            &mut render_state,
+            &shared_task_dispatcher,
             &mut message_tx,
             next_message,
-            &mut render_state_fn,
         ) {
             MessageHandled::Progressing => (),
             MessageHandled::NoProgress => {
@@ -166,5 +166,5 @@ where
         }
     }
     log::debug!("Terminating message loop");
-    state
+    (state, render_state)
 }
