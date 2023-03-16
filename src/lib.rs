@@ -30,14 +30,14 @@ pub use self::message::Message;
 
 pub mod messaging;
 pub use self::messaging::{
-    handle_next_message, message_channel, message_loop, send_message, MessageChannel,
+    message_channel, message_loop, process_next_message, send_message, MessageChannel,
     MessageHandled, MessageReceiver, MessageSender,
 };
 
-pub mod state;
-pub use self::state::{
-    state_updated, IntentHandled, RenderState, State, StateChanged, StateUpdated,
+pub mod model;
+pub use self::model::{
+    effect_applied, EffectApplied, IntentHandled, Model, ModelChanged, RenderModel,
 };
 
 pub mod task;
-pub use self::task::TaskDispatcher;
+pub use self::task::{TaskContext, TaskDispatcher};

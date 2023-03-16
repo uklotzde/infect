@@ -10,7 +10,7 @@
 [![Continuous integration](https://github.com/uklotzde/infect/actions/workflows/continuous-integration.yaml/badge.svg)](https://github.com/uklotzde/infect/actions/workflows/continuous-integration.yaml)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
-Intent/Action/Effect. Using tasks for triggering side-effects.
+Intent/action/effect model with tasks for triggering side-effects.
 
 ## License
 

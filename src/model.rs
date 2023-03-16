@@ -5,21 +5,21 @@ use std::ops::{Add, AddAssign};
 
 use crate::Action;
 
-/// Perceptible effect when updating the state
+/// Perceptible effect when updating the model
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StateChanged {
-    /// The state has not changed
+pub enum ModelChanged {
+    /// The model has not changed
     Unchanged,
 
-    /// The state might have changed
+    /// The model might have changed
     ///
     /// False positives are allowed, i.e. when unsure or when determining
-    /// if the state has actually changed is either costly or impossible
+    /// if the model has actually changed is either costly or impossible
     /// then default to this variant.
     MaybeChanged,
 }
 
-impl Add<StateChanged> for StateChanged {
+impl Add<ModelChanged> for ModelChanged {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -30,31 +30,31 @@ impl Add<StateChanged> for StateChanged {
     }
 }
 
-impl AddAssign for StateChanged {
+impl AddAssign for ModelChanged {
     fn add_assign(&mut self, other: Self) {
         *self = *self + other;
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StateUpdated<Effect, Task> {
-    /// The outcome on the state itself
+pub struct EffectApplied<Effect, Task> {
+    /// The outcome on the model itself
     ///
-    /// The state might have been modified during by the update
+    /// The model might have been modified during by the update
     /// operation.
-    pub changed: StateChanged,
+    pub model_changed: ModelChanged,
 
     /// The next action
     ///
-    /// Updating the state results in 0 or 1 next action(s).
+    /// Updating the model results in 0 or 1 next action(s).
     pub next_action: Option<Action<Effect, Task>>,
 }
 
-impl<Effect, Task> StateUpdated<Effect, Task> {
+impl<Effect, Task> EffectApplied<Effect, Task> {
     #[must_use]
     pub fn unchanged(next_action: impl Into<Option<Action<Effect, Task>>>) -> Self {
         Self {
-            changed: StateChanged::Unchanged,
+            model_changed: ModelChanged::Unchanged,
             next_action: next_action.into(),
         }
     }
@@ -62,28 +62,28 @@ impl<Effect, Task> StateUpdated<Effect, Task> {
     #[must_use]
     pub fn maybe_changed(next_action: impl Into<Option<Action<Effect, Task>>>) -> Self {
         Self {
-            changed: StateChanged::MaybeChanged,
+            model_changed: ModelChanged::MaybeChanged,
             next_action: next_action.into(),
         }
     }
 }
 
 #[must_use]
-pub fn state_updated<E1, T1, E2, T2>(from: StateUpdated<E1, T1>) -> StateUpdated<E2, T2>
+pub fn effect_applied<E1, T1, E2, T2>(from: EffectApplied<E1, T1>) -> EffectApplied<E2, T2>
 where
     E1: Into<E2>,
     T1: Into<T2>,
 {
-    let StateUpdated {
-        changed,
+    let EffectApplied {
+        model_changed,
         next_action,
     } = from;
     let next_action = next_action.map(|action| match action {
         Action::ApplyEffect(effect) => Action::apply_effect(effect),
         Action::DispatchTask(task) => Action::dispatch_task(task),
     });
-    StateUpdated {
-        changed,
+    EffectApplied {
+        model_changed,
         next_action,
     }
 }
@@ -94,7 +94,8 @@ pub enum IntentHandled<Intent, Effect, Task> {
     Rejected(Intent),
 }
 
-pub trait State {
+/// A stateful model
+pub trait Model {
     type Intent;
     type Effect;
     type Task;
@@ -106,12 +107,17 @@ pub trait State {
     ) -> IntentHandled<Self::Intent, Self::Effect, Self::Task>;
 
     #[must_use]
-    fn update(&mut self, effect: Self::Effect) -> StateUpdated<Self::Effect, Self::Task>;
+    fn apply_effect(&mut self, effect: Self::Effect) -> EffectApplied<Self::Effect, Self::Task>;
 }
 
-pub trait RenderState {
-    type State: State;
+/// A model renderer
+pub trait RenderModel {
+    type Model: Model;
 
+    /// Render the model
+    ///
+    /// Might return an observed intent that is enqueued as a message
+    /// and handled in tuen later.
     #[must_use]
-    fn render_state(&mut self, state: &Self::State) -> Option<<Self::State as State>::Intent>;
+    fn render_model(&mut self, model: &Self::Model) -> Option<<Self::Model as Model>::Intent>;
 }
