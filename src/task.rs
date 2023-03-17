@@ -7,8 +7,8 @@ use crate::{send_message, Message, MessageSender};
 
 #[derive(Debug)]
 pub struct TaskContext<TaskExecutor, Intent, Effect> {
-    task_executor: TaskExecutor,
-    message_tx: MessageSender<Intent, Effect>,
+    pub task_executor: TaskExecutor,
+    pub message_tx: MessageSender<Intent, Effect>,
 }
 
 impl<TaskExecutor, Intent, Effect> TaskContext<TaskExecutor, Intent, Effect>
@@ -17,13 +17,13 @@ where
     Effect: fmt::Debug,
     TaskExecutor: crate::TaskExecutor<TaskExecutor, Intent = Intent, Effect = Effect> + Clone,
 {
-    pub fn send_message(&mut self, message: Message<Intent, Effect>) {
+    pub fn send_message(&mut self, message: impl Into<Message<Intent, Effect>>) {
         send_message(&mut self.message_tx, message);
     }
 
-    pub fn spawn_task(&self, task: TaskExecutor::Task) {
+    pub fn spawn_task(&self, task: impl Into<TaskExecutor::Task>) {
         let context = self.clone();
-        self.task_executor.spawn_task(context, task);
+        self.task_executor.spawn_task(context, task.into());
     }
 
     pub fn all_tasks_finished(&self) -> bool {
