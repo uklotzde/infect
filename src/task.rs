@@ -1,33 +1,53 @@
 // SPDX-FileCopyrightText: The infect authors
 // SPDX-License-Identifier: MPL-2.0
 
-use std::{rc::Rc, sync::Arc};
+use std::{fmt, rc::Rc, sync::Arc};
 
-use crate::MessageSender;
+use crate::{send_message, Message, MessageSender};
 
 #[derive(Debug)]
-pub struct TaskContext<TaskDispatcher, Intent, Effect> {
-    pub task_dispatcher: TaskDispatcher,
-    pub message_tx: MessageSender<Intent, Effect>,
+pub struct TaskContext<TaskExecutor, Intent, Effect> {
+    task_executor: TaskExecutor,
+    message_tx: MessageSender<Intent, Effect>,
 }
 
-impl<TaskDispatcher, Intent, Effect> Clone for TaskContext<TaskDispatcher, Intent, Effect>
+impl<TaskExecutor, Intent, Effect> TaskContext<TaskExecutor, Intent, Effect>
 where
-    TaskDispatcher: Clone,
+    Intent: fmt::Debug,
+    Effect: fmt::Debug,
+    TaskExecutor: crate::TaskExecutor<TaskExecutor, Intent = Intent, Effect = Effect> + Clone,
+{
+    pub fn send_message(&mut self, message: Message<Intent, Effect>) {
+        send_message(&mut self.message_tx, message);
+    }
+
+    pub fn spawn_task(&self, task: TaskExecutor::Task) {
+        let context = self.clone();
+        self.task_executor.spawn_task(context, task);
+    }
+
+    pub fn all_tasks_finished(&self) -> bool {
+        self.task_executor.all_tasks_finished()
+    }
+}
+
+impl<TaskExecutor, Intent, Effect> Clone for TaskContext<TaskExecutor, Intent, Effect>
+where
+    TaskExecutor: Clone,
 {
     fn clone(&self) -> Self {
         let Self {
-            task_dispatcher,
+            task_executor,
             message_tx,
         } = self;
         Self {
-            task_dispatcher: task_dispatcher.clone(),
+            task_executor: task_executor.clone(),
             message_tx: message_tx.clone(),
         }
     }
 }
 
-pub trait TaskDispatcher<T> {
+pub trait TaskExecutor<T> {
     type Intent;
     type Effect;
     type Task;
@@ -38,21 +58,18 @@ pub trait TaskDispatcher<T> {
     #[must_use]
     fn all_tasks_finished(&self) -> bool;
 
-    /// Dispatch a task
+    /// Spawns a task
     ///
-    /// The dispatched task is executed concurrently, e.g. by spawning
+    /// The spawned task is executed concurrently, e.g. by spawning
     /// an asynchronous task on some executor.
     ///
-    /// While running tasks can send messages (`message_tx`) and dispatch
-    /// more tasks (`shared_self`).
-    ///
-    /// The `task_dispatcher` parameter is needed for technical reasons.
-    fn dispatch_task(&self, context: TaskContext<T, Self::Intent, Self::Effect>, task: Self::Task);
+    /// Tasks can send messages and spawn new tasks through `context`.
+    fn spawn_task(&self, context: TaskContext<T, Self::Intent, Self::Effect>, task: Self::Task);
 }
 
-impl<T> TaskDispatcher<Rc<T>> for Rc<T>
+impl<T> TaskExecutor<Rc<T>> for Rc<T>
 where
-    T: TaskDispatcher<Rc<T>>,
+    T: TaskExecutor<Rc<T>>,
 {
     type Intent = T::Intent;
     type Effect = T::Effect;
@@ -62,18 +79,14 @@ where
         T::all_tasks_finished(self)
     }
 
-    fn dispatch_task(
-        &self,
-        context: TaskContext<Self, Self::Intent, Self::Effect>,
-        task: Self::Task,
-    ) {
-        T::dispatch_task(self, context, task);
+    fn spawn_task(&self, context: TaskContext<Self, Self::Intent, Self::Effect>, task: Self::Task) {
+        T::spawn_task(self, context, task);
     }
 }
 
-impl<T> TaskDispatcher<Arc<T>> for Arc<T>
+impl<T> TaskExecutor<Arc<T>> for Arc<T>
 where
-    T: TaskDispatcher<Arc<T>>,
+    T: TaskExecutor<Arc<T>>,
 {
     type Intent = T::Intent;
     type Effect = T::Effect;
@@ -83,11 +96,7 @@ where
         T::all_tasks_finished(self)
     }
 
-    fn dispatch_task(
-        &self,
-        context: TaskContext<Self, Self::Intent, Self::Effect>,
-        task: Self::Task,
-    ) {
-        T::dispatch_task(self, context, task);
+    fn spawn_task(&self, context: TaskContext<Self, Self::Intent, Self::Effect>, task: Self::Task) {
+        T::spawn_task(self, context, task);
     }
 }

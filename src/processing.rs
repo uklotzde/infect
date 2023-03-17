@@ -6,8 +6,8 @@ use std::fmt;
 use futures::{channel::mpsc, StreamExt as _};
 
 use crate::{
-    send_message, task::TaskContext, Action, EffectApplied, IntentHandled, Message, Model,
-    ModelChanged, RenderModel, TaskDispatcher,
+    task::TaskContext, Action, EffectApplied, IntentHandled, Message, Model, ModelChanged,
+    RenderModel, TaskExecutor,
 };
 
 pub type MessageSender<Intent, Effect> = mpsc::Sender<Message<Intent, Effect>>;
@@ -37,25 +37,28 @@ where
     M::Intent: fmt::Debug,
     M::Effect: fmt::Debug,
     M::Task: fmt::Debug,
-    T: TaskDispatcher<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
+    T: TaskExecutor<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
 {
     let mut model_changed = ModelChanged::Unchanged;
     let mut number_of_next_actions = 0;
     let mut number_of_messages_sent = 0;
-    let mut number_of_tasks_dispatched = 0;
+    let mut number_of_tasks_spawned = 0;
     'process_next_message: loop {
         let effect_applied = match next_message {
             Message::Intent(intent) => {
                 let next_action = match model.handle_intent(intent) {
                     IntentHandled::Accepted(next_action) => next_action,
                     IntentHandled::Rejected(intent) => {
-                        log::debug!("Discarding {intent:?} rejected by {model:?}");
+                        log::debug!("Discarding rejected intent: {intent:?}");
                         None
                     }
                 };
                 EffectApplied::unchanged(next_action)
             }
-            Message::Effect(effect) => model.apply_effect(effect),
+            Message::Effect(effect) => {
+                log::debug!("Applying effect: {effect:?}");
+                model.apply_effect(effect)
+            }
         };
         let EffectApplied {
             model_changed: next_model_changed,
@@ -63,37 +66,37 @@ where
         } = effect_applied;
         model_changed += next_model_changed;
         if let Some(next_action) = next_action {
+            // Dispatch next action
             number_of_next_actions += 1;
             match next_action {
                 Action::ApplyEffect(effect) => {
-                    log::debug!("Applying subsequent effect immediately: {effect:?}");
+                    // Processing immediately continues with the corresponding message
+                    // during this turn!
                     next_message = Message::Effect(effect);
                     continue 'process_next_message;
                 }
-                Action::DispatchTask(task) => {
-                    log::debug!("Dispatching task asynchronously: {task:?}");
-                    task_context
-                        .task_dispatcher
-                        .dispatch_task(task_context.clone(), task);
-                    number_of_tasks_dispatched += 1;
+                Action::SpawnTask(task) => {
+                    log::debug!("Spawning task: {task:?}");
+                    task_context.spawn_task(task);
+                    number_of_tasks_spawned += 1;
                 }
             }
         }
         if model_changed == ModelChanged::MaybeChanged || number_of_next_actions > 0 {
-            log::debug!("Rendering current model: {model:?}");
-            if let Some(observation_intent) = render_model.render_model(model) {
-                log::debug!("Received intent after observing model: {observation_intent:?}");
-                send_message(
-                    &mut task_context.message_tx,
-                    Message::Intent(observation_intent),
-                );
+            log::debug!("Rendering model: {model:?}");
+            if let Some(observed_intent) = render_model.render_model(model) {
+                log::debug!("Observed intent after rendering model: {observed_intent:?}");
+                // The corresponding message is enqueued like any other message, i.e.
+                // not processed immediately during this turn!
+                let message = Message::Intent(observed_intent);
+                task_context.send_message(message);
                 number_of_messages_sent += 1;
             }
         }
         break;
     }
-    log::debug!("number_of_next_actions = {number_of_next_actions}, number_of_messages_sent = {number_of_messages_sent}, number_of_tasks_dispatched = {number_of_tasks_dispatched}");
-    if number_of_messages_sent + number_of_tasks_dispatched > 0 {
+    log::debug!("Finished processing of next message: number_of_next_actions = {number_of_next_actions}, number_of_messages_sent = {number_of_messages_sent}, number_of_tasks_spawned = {number_of_tasks_spawned}");
+    if number_of_messages_sent + number_of_tasks_spawned > 0 {
         NextMessageProcessed::Progressing
     } else {
         NextMessageProcessed::NoProgress
@@ -115,19 +118,19 @@ pub async fn process_messages<M, R, T>(
     M::Effect: fmt::Debug,
     M::Task: fmt::Debug,
     R: RenderModel<Model = M>,
-    T: TaskDispatcher<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
+    T: TaskExecutor<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
 {
-    log::debug!("Starting message loop");
     while let Some(next_message) = message_rx.next().await {
         log::debug!("Processing next message: {next_message:?}");
         match process_next_message(task_context, model, render_model, next_message) {
             NextMessageProcessed::Progressing => (),
             NextMessageProcessed::NoProgress => {
-                if task_context.task_dispatcher.all_tasks_finished() {
+                if task_context.all_tasks_finished() {
+                    log::debug!("Exiting message loop after all tasks finished");
                     break;
                 }
+                log::debug!("Continuing message loop until all tasks finished");
             }
         }
     }
-    log::debug!("Terminating message loop");
 }

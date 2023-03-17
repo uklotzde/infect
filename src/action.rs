@@ -11,7 +11,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action<Effect, Task> {
     ApplyEffect(Effect),
-    DispatchTask(Task),
+    SpawnTask(Task),
 }
 
 impl<Effect, Task> Action<Effect, Task> {
@@ -22,7 +22,7 @@ impl<Effect, Task> Action<Effect, Task> {
     {
         match from {
             Action::ApplyEffect(effect) => Self::ApplyEffect(effect.into()),
-            Action::DispatchTask(task) => Self::DispatchTask(task.into()),
+            Action::SpawnTask(task) => Self::SpawnTask(task.into()),
         }
     }
 
@@ -42,9 +42,9 @@ impl<Effect, Task> Action<Effect, Task> {
         Self::ApplyEffect(effect.into())
     }
 
-    /// Create a new action that dispatches a task.
+    /// Create a new action that spawns a task.
     #[must_use]
-    pub fn dispatch_task(task: impl Into<Task>) -> Self {
-        Self::DispatchTask(task.into())
+    pub fn spawn_task(task: impl Into<Task>) -> Self {
+        Self::SpawnTask(task.into())
     }
 }

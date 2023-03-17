@@ -46,4 +46,4 @@ pub mod processing;
 pub use self::processing::{process_messages, process_next_message, NextMessageProcessed};
 
 pub mod task;
-pub use self::task::{TaskContext, TaskDispatcher};
+pub use self::task::{TaskContext, TaskExecutor};
