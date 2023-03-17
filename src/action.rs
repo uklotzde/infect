@@ -1,6 +1,13 @@
 // SPDX-FileCopyrightText: The infect authors
 // SPDX-License-Identifier: MPL-2.0
 
+/// An action is either an effect or a task
+///
+/// Actions are the result of processing a messages.
+///
+/// Each message induces at most one _next action_ that is
+/// processed in turn. Processing of a message finishes
+/// when the sequence of generated next actions terminates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action<Effect, Task> {
     ApplyEffect(Effect),
