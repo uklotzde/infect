@@ -3,19 +3,12 @@
 
 use std::fmt;
 
-use futures::{channel::mpsc, StreamExt as _};
+use futures::StreamExt as _;
 
 use crate::{
-    task::TaskContext, Action, EffectApplied, IntentHandled, Message, Model, ModelChanged,
-    RenderModel, TaskExecutor,
+    task::TaskContext, Action, EffectApplied, IntentHandled, Message, MessageReceiver, Model,
+    ModelChanged, RenderModel, TaskExecutor,
 };
-
-pub type MessageSender<Intent, Effect> = mpsc::Sender<Message<Intent, Effect>>;
-pub type MessageReceiver<Intent, Effect> = mpsc::Receiver<Message<Intent, Effect>>;
-pub type MessageChannel<Intent, Effect> = (
-    MessageSender<Intent, Effect>,
-    MessageReceiver<Intent, Effect>,
-);
 
 #[derive(Debug, Clone)]
 pub enum NextMessageProcessed<Intent> {
