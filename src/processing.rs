@@ -103,16 +103,25 @@ where
     }
 }
 
-/// Runs the message loop
-///
-/// Terminates when no progress has been made and all pending tasks have finished.
-/// Terminates immediately when the message channel is closed.
+/// The condition that stopped message processing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MessageProcessingStopped {
+    /// The message channel is closed.
+    ChannelClosed,
+
+    /// Processing the last message indicated that no progress has been made
+    /// and no next message is ready.
+    NoProgress,
+}
+
+/// Process messages until one of the stop conditions occur.
 pub async fn process_messages<M, R, T>(
     message_rx: &mut MessageReceiver<M::Intent, M::Effect>,
     task_context: &mut TaskContext<T, M::Intent, M::Effect>,
     model: &mut M,
     render_model: &mut R,
-) where
+) -> MessageProcessingStopped
+where
     M: Model + fmt::Debug,
     M::Intent: fmt::Debug,
     M::Effect: fmt::Debug,
@@ -120,16 +129,30 @@ pub async fn process_messages<M, R, T>(
     R: RenderModel<Model = M>,
     T: TaskExecutor<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
 {
-    while let Some(next_message) = message_rx.next().await {
-        log::debug!("Processing next message: {next_message:?}");
-        match process_next_message(task_context, model, render_model, next_message) {
+    let mut next_message: Option<Message<M::Intent, M::Effect>> = None;
+    loop {
+        if next_message.is_none() {
+            next_message = message_rx.next().await;
+        }
+        let Some(message) = next_message.take() else {
+            log::debug!("Stopping after message channel closed");
+            return MessageProcessingStopped::ChannelClosed;
+        };
+        log::debug!("Processing next message: {message:?}");
+        match process_next_message(task_context, model, render_model, message) {
             NextMessageProcessed::Progressing => (),
             NextMessageProcessed::NoProgress => {
-                if task_context.all_tasks_finished() {
-                    log::debug!("Exiting message loop after all tasks finished");
-                    break;
-                }
-                log::debug!("Continuing message loop until all tasks finished");
+                next_message = match message_rx.try_next() {
+                    Ok(Some(message)) => Some(message),
+                    Ok(None) => {
+                        log::debug!("Stopping after no progress made and message channel closed");
+                        return MessageProcessingStopped::ChannelClosed;
+                    }
+                    Err(_) => {
+                        log::debug!("Stopping after no progress made and no next message ready");
+                        return MessageProcessingStopped::NoProgress;
+                    }
+                };
             }
         }
     }

@@ -25,10 +25,6 @@ where
         let context = self.clone();
         self.task_executor.spawn_task(context, task.into());
     }
-
-    pub fn all_tasks_finished(&self) -> bool {
-        self.task_executor.all_tasks_finished()
-    }
 }
 
 impl<TaskExecutor, Intent, Effect> Clone for TaskContext<TaskExecutor, Intent, Effect>
@@ -52,12 +48,6 @@ pub trait TaskExecutor<T> {
     type Effect;
     type Task;
 
-    /// Keep track of pending tasks
-    ///
-    /// The message loop only terminates after all tasks have finished.
-    #[must_use]
-    fn all_tasks_finished(&self) -> bool;
-
     /// Spawns a task
     ///
     /// The spawned task is executed concurrently, e.g. by spawning
@@ -75,10 +65,6 @@ where
     type Effect = T::Effect;
     type Task = T::Task;
 
-    fn all_tasks_finished(&self) -> bool {
-        T::all_tasks_finished(self)
-    }
-
     fn spawn_task(&self, context: TaskContext<Self, Self::Intent, Self::Effect>, task: Self::Task) {
         T::spawn_task(self, context, task);
     }
@@ -91,10 +77,6 @@ where
     type Intent = T::Intent;
     type Effect = T::Effect;
     type Task = T::Task;
-
-    fn all_tasks_finished(&self) -> bool {
-        T::all_tasks_finished(self)
-    }
 
     fn spawn_task(&self, context: TaskContext<Self, Self::Intent, Self::Effect>, task: Self::Task) {
         T::spawn_task(self, context, task);
