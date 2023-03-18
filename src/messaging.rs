@@ -7,14 +7,21 @@ use futures::channel::mpsc;
 
 use crate::Message;
 
+/// Message sender for submitting messages
 pub type MessageSender<Intent, Effect> = mpsc::Sender<Message<Intent, Effect>>;
+
+/// Message receiver for consuming messages
 pub type MessageReceiver<Intent, Effect> = mpsc::Receiver<Message<Intent, Effect>>;
+
+/// Buffered, MPSC message channel
 pub type MessageChannel<Intent, Effect> = (
     MessageSender<Intent, Effect>,
     MessageReceiver<Intent, Effect>,
 );
 
-/// Create a buffered message channel with limited capacity.
+/// Create a buffered, MPSC message channel with limited capacity
+///
+/// FIFO queue of sent messages that are consumed by a single [`MessageReceiver`].
 #[must_use]
 pub fn message_channel<Intent, Effect>(
     capacity: usize,
@@ -25,7 +32,15 @@ pub fn message_channel<Intent, Effect>(
     mpsc::channel(capacity)
 }
 
-pub fn send_message<Intent: fmt::Debug, Effect: fmt::Debug>(
+/// Enqueue a message into the channel
+///
+/// A utility function that detects and logs unexpected send failures
+/// that the submitter should not be bothered with.
+///
+/// Submitting a message is a fire-and-forget operation that must
+/// always succeed. The framework is responsible for dealing with
+/// unexpected failures.
+pub fn submit_message<Intent: fmt::Debug, Effect: fmt::Debug>(
     message_tx: &mut MessageSender<Intent, Effect>,
     message: impl Into<Message<Intent, Effect>>,
 ) {

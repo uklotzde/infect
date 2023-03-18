@@ -7,26 +7,33 @@ use futures::StreamExt as _;
 
 use crate::{
     task::TaskContext, Action, EffectApplied, IntentHandled, Message, MessageReceiver, Model,
-    ModelChanged, RenderModel, TaskExecutor,
+    ModelChanged, ModelRender, TaskExecutor,
 };
 
+/// Outcome of processing a single message
 #[derive(Debug, Clone)]
-pub enum NextMessageProcessed<Intent> {
+pub enum MessageProcessed<Intent> {
+    /// A message with an intent has been rejected
     IntentRejected(Intent),
+
+    /// A message with an observed intent has been submitted or
+    /// a task has been spawned
     Progressing,
+
+    /// Not [`Self::Progressing`]
     NoProgress,
 }
 
-/// Process the next message
+/// Process a single message
 #[must_use]
-pub fn process_next_message<M, R, T>(
+pub fn process_message<M, R, T>(
     task_context: &mut TaskContext<T, M::Intent, M::Effect>,
     model: &mut M,
     render_model: &mut R,
-    next_message: Message<M::Intent, M::Effect>,
-) -> NextMessageProcessed<M::Intent>
+    message: Message<M::Intent, M::Effect>,
+) -> MessageProcessed<M::Intent>
 where
-    R: RenderModel<Model = M>,
+    R: ModelRender<Model = M>,
     M: Model + fmt::Debug,
     M::Intent: fmt::Debug,
     M::Effect: fmt::Debug,
@@ -36,11 +43,11 @@ where
     let mut model_changed = ModelChanged::Unchanged;
     let mut effect_count = 0;
     let mut progressing = false;
-    let mut next_action = match next_message {
+    let mut next_action = match message {
         Message::Intent(intent) => match model.handle_intent(intent) {
             IntentHandled::Accepted(next_action) => next_action,
             IntentHandled::Rejected(intent) => {
-                return NextMessageProcessed::IntentRejected(intent);
+                return MessageProcessed::IntentRejected(intent);
             }
         },
         Message::Effect(effect) => Some(Action::ApplyEffect(effect)),
@@ -75,21 +82,23 @@ where
             // The corresponding message is enqueued like any other message, i.e.
             // not processed immediately during this turn!
             let message = Message::Intent(observed_intent);
-            task_context.send_message(message);
+            task_context.submit_message(message);
             progressing = true;
         }
     }
     if progressing {
-        NextMessageProcessed::Progressing
+        MessageProcessed::Progressing
     } else {
-        NextMessageProcessed::NoProgress
+        MessageProcessed::NoProgress
     }
 }
 
-/// The condition that stopped message processing.
+/// Outcome of consuming multiple messages
+///
+/// The condition with associated data that stopped consuming messages.
 #[derive(Debug, Clone)]
-pub enum ProcessingMessagesStopped<Intent> {
-    /// An intent has been rejected
+pub enum MessagesConsumed<Intent> {
+    /// The last message with an intent has been rejected
     IntentRejected(Intent),
 
     /// The message channel is closed.
@@ -100,19 +109,19 @@ pub enum ProcessingMessagesStopped<Intent> {
     NoProgress,
 }
 
-/// Process messages until one of the stop conditions occur.
-pub async fn process_messages<M, R, T>(
+/// Receive and process messages until one of the stop conditions are encountered
+pub async fn consume_messages<M, R, T>(
     message_rx: &mut MessageReceiver<M::Intent, M::Effect>,
     task_context: &mut TaskContext<T, M::Intent, M::Effect>,
     model: &mut M,
     render_model: &mut R,
-) -> ProcessingMessagesStopped<M::Intent>
+) -> MessagesConsumed<M::Intent>
 where
     M: Model + fmt::Debug,
     M::Intent: fmt::Debug,
     M::Effect: fmt::Debug,
     M::Task: fmt::Debug,
-    R: RenderModel<Model = M>,
+    R: ModelRender<Model = M>,
     T: TaskExecutor<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
 {
     let mut next_message: Option<Message<M::Intent, M::Effect>> = None;
@@ -122,25 +131,25 @@ where
         }
         let Some(message) = next_message.take() else {
             log::debug!("Stopping after message channel closed");
-            return ProcessingMessagesStopped::ChannelClosed;
+            return MessagesConsumed::ChannelClosed;
         };
         log::debug!("Processing next message: {message:?}");
-        match process_next_message(task_context, model, render_model, message) {
-            NextMessageProcessed::IntentRejected(intent) => {
+        match process_message(task_context, model, render_model, message) {
+            MessageProcessed::IntentRejected(intent) => {
                 log::debug!("Stopping after intent rejected: {intent:?}");
-                return ProcessingMessagesStopped::IntentRejected(intent);
+                return MessagesConsumed::IntentRejected(intent);
             }
-            NextMessageProcessed::Progressing => (),
-            NextMessageProcessed::NoProgress => {
+            MessageProcessed::Progressing => (),
+            MessageProcessed::NoProgress => {
                 next_message = match message_rx.try_next() {
                     Ok(Some(message)) => Some(message),
                     Ok(None) => {
                         log::debug!("Stopping after no progress made and message channel closed");
-                        return ProcessingMessagesStopped::ChannelClosed;
+                        return MessagesConsumed::ChannelClosed;
                     }
                     Err(_) => {
                         log::debug!("Stopping after no progress made and no next message ready");
-                        return ProcessingMessagesStopped::NoProgress;
+                        return MessagesConsumed::NoProgress;
                     }
                 };
             }

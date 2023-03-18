@@ -3,8 +3,9 @@
 
 use std::{fmt, rc::Rc, sync::Arc};
 
-use crate::{send_message, Message, MessageSender};
+use crate::{submit_message, Message, MessageSender};
 
+/// Task execution context
 #[derive(Debug)]
 pub struct TaskContext<TaskExecutor, Intent, Effect> {
     pub task_executor: TaskExecutor,
@@ -17,10 +18,12 @@ where
     Effect: fmt::Debug,
     TaskExecutor: crate::TaskExecutor<TaskExecutor, Intent = Intent, Effect = Effect> + Clone,
 {
-    pub fn send_message(&mut self, message: impl Into<Message<Intent, Effect>>) {
-        send_message(&mut self.message_tx, message);
+    /// [`submit_message()`]
+    pub fn submit_message(&mut self, message: impl Into<Message<Intent, Effect>>) {
+        submit_message(&mut self.message_tx, message);
     }
 
+    /// [`TaskExecutor::spawn_task()`]
     pub fn spawn_task(&self, task: impl Into<TaskExecutor::Task>) {
         let context = self.clone();
         self.task_executor.spawn_task(context, task.into());
@@ -43,6 +46,7 @@ where
     }
 }
 
+/// Spawn concurrent tasks
 pub trait TaskExecutor<T> {
     type Intent;
     type Effect;

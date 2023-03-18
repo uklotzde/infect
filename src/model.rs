@@ -5,13 +5,13 @@ use std::ops::{Add, AddAssign};
 
 use crate::{EffectApplied, IntentHandled};
 
-/// Perceptible effect when updating the model
+/// Model change indicator
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModelChanged {
     /// The model has not changed
     Unchanged,
 
-    /// The model might have changed
+    /// The model might have changed and needs to be re-rendered
     ///
     /// False positives are allowed, i.e. when unsure or when determining
     /// if the model has actually changed is either costly or impossible
@@ -64,14 +64,14 @@ pub trait Model {
     fn apply_effect(&mut self, effect: Self::Effect) -> EffectApplied<Self::Effect, Self::Task>;
 }
 
-/// A model renderer
-pub trait RenderModel {
+/// Render the model after changed
+pub trait ModelRender {
     type Model: Model;
 
-    /// Render the model
+    /// Render the model after changed
     ///
     /// Might return an observed intent that is enqueued as a message
-    /// and handled in tuen later.
+    /// and handled in turn later.
     #[must_use]
     fn render_model(&mut self, model: &Self::Model) -> Option<<Self::Model as Model>::Intent>;
 }

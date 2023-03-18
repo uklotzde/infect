@@ -3,6 +3,7 @@
 
 use crate::{Action, ModelChanged};
 
+/// Outcome of applying an effect to the model
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EffectApplied<Effect, Task> {
     /// The outcome on the model itself
@@ -62,6 +63,7 @@ impl<Effect, Task> EffectApplied<Effect, Task> {
         }
     }
 
+    /// Map from a differently parameterized type
     pub fn map_from<E, T>(from: EffectApplied<E, T>) -> Self
     where
         E: Into<Effect>,
@@ -78,6 +80,7 @@ impl<Effect, Task> EffectApplied<Effect, Task> {
         }
     }
 
+    /// Map into a differently parameterized type
     pub fn map_into<E, T>(self) -> EffectApplied<E, T>
     where
         E: From<Effect>,

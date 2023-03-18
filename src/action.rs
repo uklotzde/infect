@@ -1,20 +1,25 @@
 // SPDX-FileCopyrightText: The infect authors
 // SPDX-License-Identifier: MPL-2.0
 
-/// An action is either an effect or a task
+/// An effect or a task
 ///
-/// Actions are the result of processing a messages.
+/// Actions are the result of handling intents or applying
+/// effects.
 ///
-/// Each message induces at most one _next action_ that is
-/// processed in turn. Processing of a message finishes
-/// when the sequence of generated next actions terminates.
+/// Each intent or effect induces at most one _next action_.
+/// Next actions are dispatched immediately before dequeuing
+/// the next message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action<Effect, Task> {
+    /// Apply an effect
     ApplyEffect(Effect),
+
+    /// Spawn a task
     SpawnTask(Task),
 }
 
 impl<Effect, Task> Action<Effect, Task> {
+    /// Map from a differently parameterized type
     pub fn map_from<E, T>(from: Action<E, T>) -> Self
     where
         E: Into<Effect>,
@@ -26,6 +31,7 @@ impl<Effect, Task> Action<Effect, Task> {
         }
     }
 
+    /// Map into a differently parameterized type
     pub fn map_into<E, T>(self) -> Action<E, T>
     where
         E: From<Effect>,

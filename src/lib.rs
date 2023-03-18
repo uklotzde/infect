@@ -36,16 +36,14 @@ pub use self::message::Message;
 
 mod messaging;
 pub use self::messaging::{
-    message_channel, send_message, MessageChannel, MessageReceiver, MessageSender,
+    message_channel, submit_message, MessageChannel, MessageReceiver, MessageSender,
 };
 
 mod model;
-pub use self::model::{Model, ModelChanged, RenderModel};
+pub use self::model::{Model, ModelChanged, ModelRender};
 
 mod processing;
-pub use self::processing::{
-    process_messages, process_next_message, NextMessageProcessed, ProcessingMessagesStopped,
-};
+pub use self::processing::{consume_messages, process_message, MessageProcessed, MessagesConsumed};
 
 mod task;
 pub use self::task::{TaskContext, TaskExecutor};
