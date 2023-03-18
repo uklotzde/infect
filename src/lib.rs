@@ -22,30 +22,30 @@
 // TODO
 #![allow(missing_docs)]
 
-pub mod action;
+mod action;
 pub use self::action::Action;
 
-pub mod effect;
+mod effect;
 pub use self::effect::EffectApplied;
 
-pub mod intent;
+mod intent;
 pub use self::intent::IntentHandled;
 
-pub mod message;
+mod message;
 pub use self::message::Message;
 
-pub mod messaging;
+mod messaging;
 pub use self::messaging::{
     message_channel, send_message, MessageChannel, MessageReceiver, MessageSender,
 };
 
-pub mod model;
+mod model;
 pub use self::model::{Model, ModelChanged, RenderModel};
 
-pub mod processing;
+mod processing;
 pub use self::processing::{
     process_messages, process_next_message, NextMessageProcessed, ProcessingMessagesStopped,
 };
 
-pub mod task;
+mod task;
 pub use self::task::{TaskContext, TaskExecutor};
