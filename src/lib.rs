@@ -43,7 +43,9 @@ pub mod model;
 pub use self::model::{Model, ModelChanged, RenderModel};
 
 pub mod processing;
-pub use self::processing::{process_messages, process_next_message, NextMessageProcessed};
+pub use self::processing::{
+    process_messages, process_next_message, NextMessageProcessed, ProcessingMessagesStopped,
+};
 
 pub mod task;
 pub use self::task::{TaskContext, TaskExecutor};

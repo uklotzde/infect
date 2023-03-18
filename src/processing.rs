@@ -17,8 +17,9 @@ pub type MessageChannel<Intent, Effect> = (
     MessageReceiver<Intent, Effect>,
 );
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NextMessageProcessed {
+#[derive(Debug, Clone)]
+pub enum NextMessageProcessed<Intent> {
+    IntentRejected(Intent),
     Progressing,
     NoProgress,
 }
@@ -29,8 +30,8 @@ pub fn process_next_message<M, R, T>(
     task_context: &mut TaskContext<T, M::Intent, M::Effect>,
     model: &mut M,
     render_model: &mut R,
-    mut next_message: Message<M::Intent, M::Effect>,
-) -> NextMessageProcessed
+    next_message: Message<M::Intent, M::Effect>,
+) -> NextMessageProcessed<M::Intent>
 where
     R: RenderModel<Model = M>,
     M: Model + fmt::Debug,
@@ -40,63 +41,52 @@ where
     T: TaskExecutor<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
 {
     let mut model_changed = ModelChanged::Unchanged;
-    let mut number_of_next_actions = 0;
-    let mut number_of_messages_sent = 0;
-    let mut number_of_tasks_spawned = 0;
-    'process_next_message: loop {
-        let effect_applied = match next_message {
-            Message::Intent(intent) => {
-                let next_action = match model.handle_intent(intent) {
-                    IntentHandled::Accepted(next_action) => next_action,
-                    IntentHandled::Rejected(intent) => {
-                        log::debug!("Discarding rejected intent: {intent:?}");
-                        None
-                    }
-                };
-                EffectApplied::unchanged(next_action)
+    let mut effect_count = 0;
+    let mut progressing = false;
+    let mut next_action = match next_message {
+        Message::Intent(intent) => match model.handle_intent(intent) {
+            IntentHandled::Accepted(next_action) => next_action,
+            IntentHandled::Rejected(intent) => {
+                return NextMessageProcessed::IntentRejected(intent);
             }
-            Message::Effect(effect) => {
-                log::debug!("Applying effect: {effect:?}");
-                model.apply_effect(effect)
+        },
+        Message::Effect(effect) => Some(Action::ApplyEffect(effect)),
+    };
+    while let Some(action) = next_action.take() {
+        match action {
+            Action::ApplyEffect(effect) => {
+                effect_count += 1;
+                log::debug!("Applying effect #{effect_count}: {effect:?}");
+                let effect_applied = model.apply_effect(effect);
+                let EffectApplied {
+                    model_changed: model_changed_by_effect,
+                    next_action: new_next_action,
+                } = effect_applied;
+                model_changed += model_changed_by_effect;
+                // Processing continues with the next action
+                next_action = new_next_action;
             }
-        };
-        let EffectApplied {
-            model_changed: next_model_changed,
-            next_action,
-        } = effect_applied;
-        model_changed += next_model_changed;
-        if let Some(next_action) = next_action {
-            // Dispatch next action
-            number_of_next_actions += 1;
-            match next_action {
-                Action::ApplyEffect(effect) => {
-                    // Processing immediately continues with the corresponding message
-                    // during this turn!
-                    next_message = Message::Effect(effect);
-                    continue 'process_next_message;
-                }
-                Action::SpawnTask(task) => {
-                    log::debug!("Spawning task: {task:?}");
-                    task_context.spawn_task(task);
-                    number_of_tasks_spawned += 1;
-                }
+            Action::SpawnTask(task) => {
+                log::debug!("Spawning task: {task:?}");
+                task_context.spawn_task(task);
+                progressing = true;
+                // Processing stops after spawning a task
+                debug_assert!(next_action.is_none());
             }
         }
-        if model_changed == ModelChanged::MaybeChanged || number_of_next_actions > 0 {
-            log::debug!("Rendering model: {model:?}");
-            if let Some(observed_intent) = render_model.render_model(model) {
-                log::debug!("Observed intent after rendering model: {observed_intent:?}");
-                // The corresponding message is enqueued like any other message, i.e.
-                // not processed immediately during this turn!
-                let message = Message::Intent(observed_intent);
-                task_context.send_message(message);
-                number_of_messages_sent += 1;
-            }
-        }
-        break;
     }
-    log::debug!("Finished processing of next message: number_of_next_actions = {number_of_next_actions}, number_of_messages_sent = {number_of_messages_sent}, number_of_tasks_spawned = {number_of_tasks_spawned}");
-    if number_of_messages_sent + number_of_tasks_spawned > 0 {
+    if model_changed == ModelChanged::MaybeChanged {
+        log::debug!("Rendering model: {model:?}");
+        if let Some(observed_intent) = render_model.render_model(model) {
+            log::debug!("Observed intent after rendering model: {observed_intent:?}");
+            // The corresponding message is enqueued like any other message, i.e.
+            // not processed immediately during this turn!
+            let message = Message::Intent(observed_intent);
+            task_context.send_message(message);
+            progressing = true;
+        }
+    }
+    if progressing {
         NextMessageProcessed::Progressing
     } else {
         NextMessageProcessed::NoProgress
@@ -104,8 +94,11 @@ where
 }
 
 /// The condition that stopped message processing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MessageProcessingStopped {
+#[derive(Debug, Clone)]
+pub enum ProcessingMessagesStopped<Intent> {
+    /// An intent has been rejected
+    IntentRejected(Intent),
+
     /// The message channel is closed.
     ChannelClosed,
 
@@ -120,7 +113,7 @@ pub async fn process_messages<M, R, T>(
     task_context: &mut TaskContext<T, M::Intent, M::Effect>,
     model: &mut M,
     render_model: &mut R,
-) -> MessageProcessingStopped
+) -> ProcessingMessagesStopped<M::Intent>
 where
     M: Model + fmt::Debug,
     M::Intent: fmt::Debug,
@@ -136,21 +129,25 @@ where
         }
         let Some(message) = next_message.take() else {
             log::debug!("Stopping after message channel closed");
-            return MessageProcessingStopped::ChannelClosed;
+            return ProcessingMessagesStopped::ChannelClosed;
         };
         log::debug!("Processing next message: {message:?}");
         match process_next_message(task_context, model, render_model, message) {
+            NextMessageProcessed::IntentRejected(intent) => {
+                log::debug!("Stopping after intent rejected: {intent:?}");
+                return ProcessingMessagesStopped::IntentRejected(intent);
+            }
             NextMessageProcessed::Progressing => (),
             NextMessageProcessed::NoProgress => {
                 next_message = match message_rx.try_next() {
                     Ok(Some(message)) => Some(message),
                     Ok(None) => {
                         log::debug!("Stopping after no progress made and message channel closed");
-                        return MessageProcessingStopped::ChannelClosed;
+                        return ProcessingMessagesStopped::ChannelClosed;
                     }
                     Err(_) => {
                         log::debug!("Stopping after no progress made and no next message ready");
-                        return MessageProcessingStopped::NoProgress;
+                        return ProcessingMessagesStopped::NoProgress;
                     }
                 };
             }
