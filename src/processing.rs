@@ -108,7 +108,8 @@ pub enum MessagesConsumed<Intent> {
     NoProgress,
 }
 
-/// Receive and process messages until one of the stop conditions are encountered
+/// Receive and process messages until one of the stop conditions are
+/// encountered
 pub async fn consume_messages<M, R, T>(
     message_rx: &mut MessageReceiver<M::Intent, M::Effect>,
     task_context: &mut TaskContext<T, M::Intent, M::Effect>,

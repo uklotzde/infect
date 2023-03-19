@@ -21,7 +21,8 @@ pub type MessageChannel<Intent, Effect> = (
 
 /// Create a buffered, MPSC message channel with limited capacity
 ///
-/// FIFO queue of sent messages that are consumed by a single [`MessageReceiver`].
+/// FIFO queue of sent messages that are consumed by a single
+/// [`MessageReceiver`].
 #[must_use]
 pub fn message_channel<Intent, Effect>(
     capacity: usize,
