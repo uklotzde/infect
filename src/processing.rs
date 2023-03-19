@@ -81,8 +81,7 @@ where
             log::debug!("Observed intent after rendering model: {observed_intent:?}");
             // The corresponding message is enqueued like any other message, i.e.
             // not processed immediately during this turn!
-            let message = Message::Intent(observed_intent);
-            task_context.submit_message(message);
+            task_context.submit_intent(observed_intent);
             progressing = true;
         }
     }

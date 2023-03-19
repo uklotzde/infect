@@ -36,7 +36,8 @@ pub use self::message::Message;
 
 mod messaging;
 pub use self::messaging::{
-    message_channel, submit_message, MessageChannel, MessageReceiver, MessageSender,
+    message_channel, submit_effect, submit_intent, submit_message, MessageChannel, MessageReceiver,
+    MessageSender,
 };
 
 mod model;

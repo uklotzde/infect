@@ -3,7 +3,7 @@
 
 use std::{fmt, rc::Rc, sync::Arc};
 
-use crate::{submit_message, Message, MessageSender};
+use crate::{submit_effect, submit_intent, submit_message, Message, MessageSender};
 
 /// Task execution context
 #[derive(Debug)]
@@ -21,6 +21,16 @@ where
     /// [`submit_message()`]
     pub fn submit_message(&mut self, message: impl Into<Message<Intent, Effect>>) {
         submit_message(&mut self.message_tx, message);
+    }
+
+    /// [`submit_intent()`]
+    pub fn submit_intent(&mut self, intent: impl Into<Intent>) {
+        submit_intent(&mut self.message_tx, intent);
+    }
+
+    /// [`submit_effect()`]
+    pub fn submit_effect(&mut self, effect: impl Into<Effect>) {
+        submit_effect(&mut self.message_tx, effect);
     }
 
     /// [`TaskExecutor::spawn_task()`]

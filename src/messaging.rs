@@ -64,3 +64,23 @@ pub fn submit_message<Intent: fmt::Debug, Effect: fmt::Debug>(
         }
     }
 }
+
+/// Submit an intent
+///
+/// See also: [`submit_message`]
+pub fn submit_intent<Intent: fmt::Debug, Effect: fmt::Debug>(
+    message_tx: &mut MessageSender<Intent, Effect>,
+    intent: impl Into<Intent>,
+) {
+    submit_message(message_tx, Message::Intent(intent.into()));
+}
+
+/// Submit an effect
+///
+/// See also: [`submit_message`]
+pub fn submit_effect<Intent: fmt::Debug, Effect: fmt::Debug>(
+    message_tx: &mut MessageSender<Intent, Effect>,
+    effect: impl Into<Effect>,
+) {
+    submit_message(message_tx, Message::Effect(effect.into()));
+}
