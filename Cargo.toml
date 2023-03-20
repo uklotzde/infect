@@ -3,13 +3,13 @@
 
 [package]
 name = "infect"
-description = "Intent/action/effect model with tasks for triggering side-effects"
+description = "Intent/effect/task/action - A variation on the Model View Intent (MVI) paradigm"
 version = "0.0.17"
 license = "MPL-2.0"
 readme = "README.md"
 repository = "https://github.com/uklotzde/infect"
-keywords = []
-categories = []
+keywords = ["application", "dataflow", "unidirectional", "model"]
+categories = ["asynchronous", "gui", "web-programming"]
 edition = "2021"
 include = ["/src", "/README.md", "/LICENSES"]
 

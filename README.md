@@ -10,7 +10,12 @@
 [![Continuous integration](https://github.com/uklotzde/infect/actions/workflows/continuous-integration.yaml/badge.svg)](https://github.com/uklotzde/infect/actions/workflows/continuous-integration.yaml)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
-Intent/action/effect model with tasks for triggering side-effects.
+A variation on the Model-View-Intent (MVI) paradigm using
+
+- _intents_ for user interaction,
+- (immediate) _effects_ for model changes,
+- _actions_ for composing sequential behavior, and
+- _tasks_ for inducing concurrent side-_effects_.
 
 ## License
 
