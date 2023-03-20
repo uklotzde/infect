@@ -102,3 +102,11 @@ impl<Effect, Task> IntentAccepted<Effect, Task> {
         Self::SpawnTask(task.into())
     }
 }
+
+impl<Rejected, Effect, Task> From<IntentAccepted<Effect, Task>>
+    for IntentHandled<Rejected, Effect, Task>
+{
+    fn from(accepted: IntentAccepted<Effect, Task>) -> Self {
+        IntentHandled::Accepted(accepted)
+    }
+}
