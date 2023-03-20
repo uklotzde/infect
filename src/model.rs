@@ -9,6 +9,11 @@ use crate::{EffectApplied, IntentHandled};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModelChanged {
     /// The model has not changed
+    ///
+    /// Only return this variant if the model has NOT changed, i.e. if no
+    /// no changes are observable and rendering could be skipped. If unsure
+    /// or when in doubt return [`Self::MaybeChanged`] to re-render the
+    /// model.
     Unchanged,
 
     /// The model might have changed and needs to be re-rendered
