@@ -5,15 +5,23 @@ use crate::Action;
 
 /// Outcome of handling an intent
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IntentHandled<Intent, Effect, Task> {
+pub enum IntentHandled<Rejected, Effect, Task> {
+    /// Intent has been rejected
+    Rejected(Rejected),
+
     /// Intent has been accepted
     Accepted(Option<Action<Effect, Task>>),
-
-    /// Intent has been rejected
-    Rejected(Intent),
 }
 
-impl<Intent, Effect, Task> IntentHandled<Intent, Effect, Task> {
+impl<Rejected, Effect, Task> IntentHandled<Rejected, Effect, Task> {
+    /// Reject an intent
+    pub fn rejected<R>(rejected: R) -> Self
+    where
+        R: Into<Rejected>,
+    {
+        Self::Rejected(rejected.into())
+    }
+
     /// Accept an intent
     pub fn accepted<E, T>(action: impl Into<Option<Action<E, T>>>) -> Self
     where
@@ -23,31 +31,23 @@ impl<Intent, Effect, Task> IntentHandled<Intent, Effect, Task> {
         Self::Accepted(action.into().map(Action::map_from))
     }
 
-    /// Reject an intent
-    pub fn rejected<I>(intent: I) -> Self
-    where
-        I: Into<Intent>,
-    {
-        Self::Rejected(intent.into())
-    }
-
     /// Map from a differently parameterized type
-    pub fn map_from<I, E, T>(from: IntentHandled<I, E, T>) -> Self
+    pub fn map_from<R, E, T>(from: IntentHandled<R, E, T>) -> Self
     where
-        I: Into<Intent>,
+        R: Into<Rejected>,
         E: Into<Effect>,
         T: Into<Task>,
     {
         match from {
+            IntentHandled::Rejected(rejected) => Self::Rejected(rejected.into()),
             IntentHandled::Accepted(action) => Self::Accepted(action.map(Action::map_from)),
-            IntentHandled::Rejected(intent) => Self::Rejected(intent.into()),
         }
     }
 
     /// Map into a differently parameterized type
-    pub fn map_into<I, E, T>(self) -> IntentHandled<I, E, T>
+    pub fn map_into<R, E, T>(self) -> IntentHandled<R, E, T>
     where
-        I: From<Intent>,
+        R: From<Rejected>,
         E: From<Effect>,
         T: From<Task>,
     {

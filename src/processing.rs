@@ -12,9 +12,9 @@ use crate::{
 
 /// Outcome of processing a single message
 #[derive(Debug, Clone)]
-pub enum MessageProcessed<Intent> {
+pub enum MessageProcessed<IntentRejected> {
     /// A message with an intent has been rejected
-    IntentRejected(Intent),
+    IntentRejected(IntentRejected),
 
     /// A message with an observed intent has been submitted or
     /// a task has been spawned
@@ -31,13 +31,14 @@ pub fn process_message<M, R, T>(
     model: &mut M,
     render_model: &mut R,
     message: Message<M::Intent, M::Effect>,
-) -> MessageProcessed<M::Intent>
+) -> MessageProcessed<M::IntentRejected>
 where
-    R: ModelRender<Model = M>,
     M: Model + fmt::Debug,
     M::Intent: fmt::Debug,
+    M::IntentRejected: fmt::Debug,
     M::Effect: fmt::Debug,
     M::Task: fmt::Debug,
+    R: ModelRender<Model = M>,
     T: TaskExecutor<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
 {
     let mut model_changed = ModelChanged::Unchanged;
@@ -46,8 +47,8 @@ where
     let mut next_action = match message {
         Message::Intent(intent) => match model.handle_intent(intent) {
             IntentHandled::Accepted(next_action) => next_action,
-            IntentHandled::Rejected(intent) => {
-                return MessageProcessed::IntentRejected(intent);
+            IntentHandled::Rejected(intent_rejected) => {
+                return MessageProcessed::IntentRejected(intent_rejected);
             }
         },
         Message::Effect(effect) => Some(Action::ApplyEffect(effect)),
@@ -96,9 +97,9 @@ where
 ///
 /// The condition with associated data that stopped consuming messages.
 #[derive(Debug, Clone)]
-pub enum MessagesConsumed<Intent> {
+pub enum MessagesConsumed<IntentRejected> {
     /// The last message with an intent has been rejected
-    IntentRejected(Intent),
+    IntentRejected(IntentRejected),
 
     /// The message channel is closed.
     ChannelClosed,
@@ -115,10 +116,11 @@ pub async fn consume_messages<M, R, T>(
     task_context: &mut TaskContext<T, M::Intent, M::Effect>,
     model: &mut M,
     render_model: &mut R,
-) -> MessagesConsumed<M::Intent>
+) -> MessagesConsumed<M::IntentRejected>
 where
     M: Model + fmt::Debug,
     M::Intent: fmt::Debug,
+    M::IntentRejected: fmt::Debug,
     M::Effect: fmt::Debug,
     M::Task: fmt::Debug,
     R: ModelRender<Model = M>,
@@ -135,9 +137,9 @@ where
         };
         log::debug!("Processing next message: {message:?}");
         match process_message(task_context, model, render_model, message) {
-            MessageProcessed::IntentRejected(intent) => {
-                log::debug!("Stopping after intent rejected: {intent:?}");
-                return MessagesConsumed::IntentRejected(intent);
+            MessageProcessed::IntentRejected(intent_rejected) => {
+                log::debug!("Stopping after intent rejected: {intent_rejected:?}");
+                return MessagesConsumed::IntentRejected(intent_rejected);
             }
             MessageProcessed::Progressing => (),
             MessageProcessed::NoProgress => {

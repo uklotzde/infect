@@ -44,6 +44,7 @@ impl AddAssign for ModelChanged {
 /// A stateful model
 pub trait Model {
     type Intent;
+    type IntentRejected;
     type Effect;
     type Task;
 
@@ -58,7 +59,7 @@ pub trait Model {
     fn handle_intent(
         &self,
         intent: Self::Intent,
-    ) -> IntentHandled<Self::Intent, Self::Effect, Self::Task>;
+    ) -> IntentHandled<Self::IntentRejected, Self::Effect, Self::Task>;
 
     /// Apply an effect on the model
     ///
