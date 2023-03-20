@@ -17,6 +17,14 @@ A variation on the Model-View-Intent (MVI) paradigm using
 - _actions_ for composing sequential behavior, and
 - _tasks_ for inducing concurrent side-_effects_.
 
+## Naming
+
+The semantic distinction of external triggers, inputs, or _events_ (as in _event sourcing_)
+into _intents_ and _effects_ is the characteristic difference from existing approaches.
+Both stimuli are combined into a _messages_ for transporting and feeding them into the system.
+
+Combining **in**tent and ef**fect** results in **infect**.
+
 ## License
 
 Licensed under the Mozilla Public License 2.0 (MPL-2.0) (see [MPL-2.0.txt](LICENSES/MPL-2.0.txt) or <https://www.mozilla.org/MPL/2.0/>).
