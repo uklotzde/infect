@@ -14,7 +14,6 @@ A variation on the Model-View-Intent (MVI) paradigm using
 
 - _intents_ for user interaction,
 - (immediate) _effects_ for model changes,
-- _actions_ for composing sequential behavior, and
 - _tasks_ for inducing concurrent side-_effects_.
 
 ## Naming
@@ -23,7 +22,9 @@ The semantic distinction of external triggers, inputs, or _events_ (as in _event
 into _intents_ and _effects_ is the characteristic difference from existing approaches.
 Both stimuli are combined into a _messages_ for transporting and feeding them into the system.
 
-Combining **in**tent and ef**fect** results in **infect**.
+Each _message_ induces at most one _task_ for triggering side-effects.
+
+Combining _**in**tent_, _ef**fec**t_, and _**t**ask_ gives **infect**.
 
 ## License
 

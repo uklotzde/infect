@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: The infect authors
 // SPDX-License-Identifier: MPL-2.0
 
-use std::ops::{Add, AddAssign};
-
 use crate::{EffectApplied, IntentHandled};
 
 /// Model change indicator
@@ -22,23 +20,6 @@ pub enum ModelChanged {
     /// if the model has actually changed is either costly or impossible
     /// then default to this variant.
     MaybeChanged,
-}
-
-impl Add<ModelChanged> for ModelChanged {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
-            (Self::Unchanged, Self::Unchanged) => Self::Unchanged,
-            (_, _) => Self::MaybeChanged,
-        }
-    }
-}
-
-impl AddAssign for ModelChanged {
-    fn add_assign(&mut self, other: Self) {
-        *self = *self + other;
-    }
 }
 
 /// A stateful model
@@ -67,7 +48,7 @@ pub trait Model {
     /// and replaying the sequence of effects is sufficient for reconstructing
     /// each intermediate state of the model.
     #[must_use]
-    fn apply_effect(&mut self, effect: Self::Effect) -> EffectApplied<Self::Effect, Self::Task>;
+    fn apply_effect(&mut self, effect: Self::Effect) -> EffectApplied<Self::Task>;
 }
 
 /// Render the model after changed

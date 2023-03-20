@@ -3,7 +3,7 @@
 
 /// An intent or an effect
 ///
-/// In React-terms a `Message` corresponds to an _action_. The distinction
+/// In React-terms a [`Message`] corresponds to an _action_. The distinction
 /// into _intents_ and _effects_ allows to distinguish the semantic meaning.
 ///
 /// Intents are supposed to happen (in the future), e.g. when submitting

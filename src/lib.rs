@@ -22,14 +22,11 @@
 // TODO
 #![allow(missing_docs)]
 
-mod action;
-pub use self::action::Action;
-
 mod effect;
 pub use self::effect::EffectApplied;
 
 mod intent;
-pub use self::intent::IntentHandled;
+pub use self::intent::{IntentAccepted, IntentHandled};
 
 mod message;
 pub use self::message::Message;

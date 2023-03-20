@@ -1,89 +1,80 @@
 // SPDX-FileCopyrightText: The infect authors
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::{Action, ModelChanged};
+use crate::ModelChanged;
 
 /// Outcome of applying an effect to the model
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct EffectApplied<Effect, Task> {
-    /// The outcome on the model itself
-    ///
-    /// The model might have been modified during by the update
-    /// operation.
+pub struct EffectApplied<Task> {
+    /// Changes of the model
     pub model_changed: ModelChanged,
 
-    /// The next action
-    ///
-    /// Updating the model results in 0 or 1 next action(s).
-    pub next_action: Option<Action<Effect, Task>>,
+    /// The follow-up task
+    pub task: Option<Task>,
 }
 
-impl<Effect, Task> EffectApplied<Effect, Task> {
-    /// Mark the model as unchanged.
+impl<Task> EffectApplied<Task> {
+    /// Mark the model as unchanged
     #[must_use]
-    pub fn unchanged<E, T>(next_action: impl Into<Option<Action<E, T>>>) -> Self
+    pub fn unchanged<T>(task: impl Into<Option<T>>) -> Self
     where
-        E: Into<Effect>,
         T: Into<Task>,
     {
         Self {
             model_changed: ModelChanged::Unchanged,
-            next_action: next_action.into().map(Action::map_from),
+            task: task.into().map(Into::into),
         }
     }
 
-    /// Mark the model as unchanged and terminate the actions sequence.
+    /// Mark the model as unchanged without a next task
     #[must_use]
     pub const fn unchanged_done() -> Self {
         Self {
             model_changed: ModelChanged::Unchanged,
-            next_action: None,
+            task: None,
         }
     }
 
-    /// Mark the model as maybe changed.
+    /// Mark the model as maybe changed
     #[must_use]
-    pub fn maybe_changed<E, T>(next_action: impl Into<Option<Action<E, T>>>) -> Self
+    pub fn maybe_changed<T>(task: impl Into<Option<T>>) -> Self
     where
-        E: Into<Effect>,
         T: Into<Task>,
     {
         Self {
             model_changed: ModelChanged::MaybeChanged,
-            next_action: next_action.into().map(Action::map_from),
+            task: task.into().map(Into::into),
         }
     }
 
-    /// Mark the model as maybe changed and terminate the actions sequence.
+    /// Mark the model as maybe changed without a next task
     #[must_use]
     pub const fn maybe_changed_done() -> Self {
         Self {
             model_changed: ModelChanged::MaybeChanged,
-            next_action: None,
+            task: None,
         }
     }
 
     /// Map from a differently parameterized type
-    pub fn map_from<E, T>(from: EffectApplied<E, T>) -> Self
+    pub fn map_from<T>(from: EffectApplied<T>) -> Self
     where
-        E: Into<Effect>,
         T: Into<Task>,
     {
         let EffectApplied {
             model_changed,
-            next_action,
+            task,
         } = from;
-        let next_action = next_action.map(Action::map_from);
+        let task = task.map(Into::into);
         Self {
             model_changed,
-            next_action,
+            task,
         }
     }
 
     /// Map into a differently parameterized type
-    pub fn map_into<E, T>(self) -> EffectApplied<E, T>
+    pub fn map_into<T>(self) -> EffectApplied<T>
     where
-        E: From<Effect>,
         T: From<Task>,
     {
         EffectApplied::map_from(self)

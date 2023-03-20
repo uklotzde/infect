@@ -6,8 +6,8 @@ use std::fmt;
 use futures::StreamExt as _;
 
 use crate::{
-    task::TaskContext, Action, EffectApplied, IntentHandled, Message, MessageReceiver, Model,
-    ModelChanged, ModelRender, TaskExecutor,
+    task::TaskContext, EffectApplied, IntentAccepted, IntentHandled, Message, MessageReceiver,
+    Model, ModelChanged, ModelRender, TaskExecutor,
 };
 
 /// Outcome of processing a single message
@@ -41,49 +41,60 @@ where
     R: ModelRender<Model = M>,
     T: TaskExecutor<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
 {
-    let mut model_changed = ModelChanged::Unchanged;
-    let mut effect_count = 0;
     let mut progressing = false;
-    let mut next_action = match message {
-        Message::Intent(intent) => match model.handle_intent(intent) {
-            IntentHandled::Accepted(next_action) => next_action,
-            IntentHandled::Rejected(intent_rejected) => {
-                return MessageProcessed::IntentRejected(intent_rejected);
-            }
-        },
-        Message::Effect(effect) => Some(Action::ApplyEffect(effect)),
-    };
-    while let Some(action) = next_action.take() {
-        match action {
-            Action::ApplyEffect(effect) => {
-                effect_count += 1;
-                log::debug!("Applying effect #{effect_count}: {effect:?}");
-                let effect_applied = model.apply_effect(effect);
-                let EffectApplied {
-                    model_changed: model_changed_by_effect,
-                    next_action: new_next_action,
-                } = effect_applied;
-                model_changed += model_changed_by_effect;
-                // Processing continues with the next action
-                next_action = new_next_action;
-            }
-            Action::SpawnTask(task) => {
-                log::debug!("Spawning task: {task:?}");
-                task_context.spawn_task(task);
-                progressing = true;
-                // Processing stops after spawning a task
-                debug_assert!(next_action.is_none());
+    let (effect, task) = match message {
+        Message::Intent(intent) => {
+            log::debug!("Handling intent: {intent:?}");
+            match model.handle_intent(intent) {
+                IntentHandled::Accepted(accepted) => {
+                    log::debug!("Intent accepted: {accepted:?}");
+                    match accepted {
+                        IntentAccepted::NoEffect => (None, None),
+                        IntentAccepted::ApplyEffect(effect) => (Some(effect), None),
+                        IntentAccepted::SpawnTask(task) => (None, Some(task)),
+                    }
+                }
+                IntentHandled::Rejected(intent_rejected) => {
+                    log::debug!("Intent rejected: {intent_rejected:?}");
+                    return MessageProcessed::IntentRejected(intent_rejected);
+                }
             }
         }
+        Message::Effect(effect) => (Some(effect), None),
+    };
+    let model_changed;
+    let task = if let Some(effect) = effect {
+        debug_assert!(task.is_none());
+        log::debug!("Applying effect: {effect:?}");
+        let effect_applied = model.apply_effect(effect);
+        let EffectApplied {
+            model_changed: model_changed_by_effect,
+            task,
+        } = effect_applied;
+        model_changed = model_changed_by_effect;
+        task
+    } else {
+        model_changed = ModelChanged::Unchanged;
+        task
+    };
+    if let Some(task) = task {
+        log::debug!("Spawning task: {task:?}");
+        task_context.spawn_task(task);
+        progressing = true;
     }
-    if model_changed == ModelChanged::MaybeChanged {
-        log::debug!("Rendering model: {model:?}");
-        if let Some(observed_intent) = render_model.render_model(model) {
-            log::debug!("Observed intent after rendering model: {observed_intent:?}");
-            // The corresponding message is enqueued like any other message, i.e.
-            // not processed immediately during this turn!
-            task_context.submit_intent(observed_intent);
-            progressing = true;
+    match model_changed {
+        ModelChanged::Unchanged => {
+            // Skip rendering
+        }
+        ModelChanged::MaybeChanged => {
+            log::debug!("Rendering model: {model:?}");
+            if let Some(observed_intent) = render_model.render_model(model) {
+                log::debug!("Observed intent after rendering model: {observed_intent:?}");
+                // The corresponding message is enqueued like any other message, i.e.
+                // not processed immediately during this turn!
+                task_context.submit_intent(observed_intent);
+                progressing = true;
+            }
         }
     }
     if progressing {
