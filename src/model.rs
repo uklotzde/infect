@@ -56,14 +56,14 @@ pub trait Model {
     /// The model remains unchanged if an intent is rejected and
     /// returned to the caller.
     ///
-    /// In general intent handlers should only check if it is safe to
+    /// Intent handlers should primarily check if it is safe and desired to
     /// proceed with an effect. They should not anticipate the results
-    /// of applying an effect by implement the business logic twice,
-    /// e.g. by checking if the intent would have any effect on the
-    /// model at all. This is the responsibility of the code that applies
-    /// effects. Shortcuts should only be implemented in rare cases
-    /// when constructing and then discarding a subsequent effect would
-    /// be a waste of resources
+    /// of applying the effect by implementing the business logic twice,
+    /// e.g. by checking if applying the effect subsequently would actually
+    /// change the model. This is the responsibility of the code that applies
+    /// effects. Shortcuts should only be implemented in rare cases when
+    /// constructing and then discarding a subsequent effect would be a
+    /// waste of resources.
     #[must_use]
     fn handle_intent(
         &self,
