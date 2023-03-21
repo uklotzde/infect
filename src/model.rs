@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: The infect authors
 // SPDX-License-Identifier: MPL-2.0
 
+use std::ops::{Add, AddAssign};
+
 use crate::{EffectApplied, IntentHandled};
 
 /// Model change indicator
@@ -20,6 +22,23 @@ pub enum ModelChanged {
     /// if the model has actually changed is either costly or impossible
     /// then default to this variant.
     MaybeChanged,
+}
+
+impl Add<ModelChanged> for ModelChanged {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::Unchanged, Self::Unchanged) => Self::Unchanged,
+            (Self::MaybeChanged, _) | (_, Self::MaybeChanged) => Self::MaybeChanged,
+        }
+    }
+}
+
+impl AddAssign for ModelChanged {
+    fn add_assign(&mut self, other: Self) {
+        *self = *self + other;
+    }
 }
 
 /// A stateful model
