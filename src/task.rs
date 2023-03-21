@@ -3,13 +3,13 @@
 
 use std::{fmt, rc::Rc, sync::Arc};
 
-use crate::{submit_effect, submit_intent, submit_message, Message, MessageSender};
+use crate::{Message, MessagePort};
 
 /// Task execution context
 #[derive(Debug)]
 pub struct TaskContext<TaskExecutor, Intent, Effect> {
     pub task_executor: TaskExecutor,
-    pub message_tx: MessageSender<Intent, Effect>,
+    pub message_port: MessagePort<Intent, Effect>,
 }
 
 impl<TaskExecutor, Intent, Effect> TaskContext<TaskExecutor, Intent, Effect>
@@ -18,19 +18,19 @@ where
     Effect: fmt::Debug,
     TaskExecutor: crate::TaskExecutor<TaskExecutor, Intent = Intent, Effect = Effect> + Clone,
 {
-    /// [`submit_message()`]
+    /// [`MessagePort::submit_message()`]
     pub fn submit_message(&mut self, message: impl Into<Message<Intent, Effect>>) {
-        submit_message(&mut self.message_tx, message);
+        self.message_port.submit_message(message);
     }
 
-    /// [`submit_intent()`]
+    /// [`MessagePort::submit_intent()`]
     pub fn submit_intent(&mut self, intent: impl Into<Intent>) {
-        submit_intent(&mut self.message_tx, intent);
+        self.message_port.submit_intent(intent);
     }
 
-    /// [`submit_effect()`]
+    /// [`MessagePort::submit_effect()`]
     pub fn submit_effect(&mut self, effect: impl Into<Effect>) {
-        submit_effect(&mut self.message_tx, effect);
+        self.message_port.submit_effect(effect);
     }
 
     /// [`TaskExecutor::spawn_task()`]
@@ -47,11 +47,11 @@ where
     fn clone(&self) -> Self {
         let Self {
             task_executor,
-            message_tx,
+            message_port,
         } = self;
         Self {
             task_executor: task_executor.clone(),
-            message_tx: message_tx.clone(),
+            message_port: message_port.clone(),
         }
     }
 }

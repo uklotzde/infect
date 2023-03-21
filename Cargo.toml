@@ -3,8 +3,8 @@
 
 [package]
 name = "infect"
-description = "Intent/effect/task/action - A variation on the Model View Intent (MVI) paradigm"
-version = "0.0.20"
+description = "Intent/effect/task - A variation on the Model View Intent (MVI) paradigm"
+version = "0.0.21"
 license = "MPL-2.0"
 readme = "README.md"
 repository = "https://github.com/uklotzde/infect"
