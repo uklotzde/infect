@@ -91,6 +91,11 @@ pub trait Model {
 }
 
 /// Render the model after changed
+///
+/// When using Functional Reactive Programming (FRP) with fine-grained reactivity
+/// for updating individual view model components immediately then rendering the
+/// model in a separate step after processing each message might not be necessary.
+/// Both approaches could be combined in flexible ways.
 pub trait ModelRender {
     /// The model
     type Model: Model;
