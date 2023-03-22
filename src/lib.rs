@@ -19,8 +19,6 @@
 // Repeating the type name in `..Default::default()` expressions
 // is not needed since the context is obvious.
 #![allow(clippy::default_trait_access)]
-// TODO
-#![allow(missing_docs)]
 
 mod effect;
 pub use self::effect::EffectApplied;

@@ -8,7 +8,10 @@ use crate::{Message, MessagePort};
 /// Task execution context
 #[derive(Debug)]
 pub struct TaskContext<TaskExecutor, Intent, Effect> {
+    /// A task executor for spawning sub-tasks
     pub task_executor: TaskExecutor,
+
+    /// A message port for submitting the task's side-effect
     pub message_port: MessagePort<Intent, Effect>,
 }
 
@@ -58,8 +61,13 @@ where
 
 /// Spawn concurrent tasks
 pub trait TaskExecutor<T> {
+    /// The intent type
     type Intent;
+
+    /// The effect type
     type Effect;
+
+    /// The task type
     type Task;
 
     /// Spawns a task

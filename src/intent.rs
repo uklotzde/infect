@@ -53,9 +53,15 @@ impl<Rejected, Effect, Task> IntentHandled<Rejected, Effect, Task> {
     }
 }
 
+/// The result of accepting an intent
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IntentAccepted<Effect, Task> {
     /// No changes needed
+    ///
+    /// Use this variant with caution. The intent handler should avoid
+    /// to anticipate the result of applying an effect. If creating the
+    /// subsequent event is cheap then better let the effect decide if
+    /// the model needs to be changed or not.
     NoEffect,
 
     /// Apply an effect

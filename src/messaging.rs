@@ -74,13 +74,13 @@ where
             if err.is_disconnected() {
                 // No receiver
                 log::debug!(
-                    "Dropping message - channel is closed: {msg:?}",
-                    msg = err.into_inner()
+                    "Dropping message - channel is closed: {message:?}",
+                    message = err.into_inner()
                 );
             } else if err.is_full() {
                 log::warn!(
-                    "Dropping message - channel is full: {msg:?}",
-                    msg = err.into_inner()
+                    "Dropping message - channel is full: {message:?}",
+                    message = err.into_inner()
                 );
             } else {
                 // This code should be unreachable

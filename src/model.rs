@@ -43,9 +43,20 @@ impl AddAssign for ModelChanged {
 
 /// A stateful model
 pub trait Model {
+    /// An intent type that this model handles
     type Intent;
+
+    /// The result of rejecting an intent
+    ///
+    /// Rejecting an intent by returning the same type would
+    /// be one option. In addition the model may also provide
+    /// the reason for the rejection.
     type IntentRejected;
+
+    /// An effect type that could be applied to this model
     type Effect;
+
+    /// A task type for inducing side-effects
     type Task;
 
     /// Handle an intent
@@ -81,6 +92,7 @@ pub trait Model {
 
 /// Render the model after changed
 pub trait ModelRender {
+    /// The model
     type Model: Model;
 
     /// Render the model after changed
