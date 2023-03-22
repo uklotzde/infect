@@ -10,11 +10,14 @@
 [![Continuous integration](https://github.com/uklotzde/infect/actions/workflows/continuous-integration.yaml/badge.svg)](https://github.com/uklotzde/infect/actions/workflows/continuous-integration.yaml)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
-A variation on the Model-View-Intent (MVI) paradigm using
+A variation on the [Model-View-Intent (MVI)][mvi] and [State-Action-Model (SAM)][sam] paradigms using
 
 - _intents_ for user interaction,
 - (immediate) _effects_ for model changes,
 - _tasks_ for inducing concurrent side-_effects_.
+
+[mvi]: https://hannesdorfmann.com/android/model-view-intent/ "Model-View-Intent (MVI)"
+[sam]: https://sam.js.org/ "State-Action-Model (SAM)"
 
 ## Naming
 
