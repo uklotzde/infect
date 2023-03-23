@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: The infect authors
 // SPDX-License-Identifier: MPL-2.0
 
-use std::ops::{Add, AddAssign};
+use std::{
+    fmt,
+    ops::{Add, AddAssign},
+};
 
 use crate::{EffectApplied, IntentHandled};
 
@@ -49,22 +52,25 @@ impl AddAssign for ModelChanged {
 /// involve hidden side-effects like randomness, the current time, or
 /// any other input values that are obtained from an uncontrolled,
 /// outer system state.
+///
+/// All associated types are supposed to be a simple value types that
+/// implement [`std::fmt::Debug`] for logging purposes.
 pub trait Model {
     /// An intent type that this model handles
-    type Intent;
+    type Intent: fmt::Debug;
 
     /// The result of rejecting an intent
     ///
     /// Rejecting an intent by returning the same type would
     /// be one option. In addition the model may also provide
     /// the reason for the rejection.
-    type IntentRejected;
+    type IntentRejected: fmt::Debug;
 
     /// An effect type that could be applied to this model
-    type Effect;
+    type Effect: fmt::Debug;
 
     /// A task type for inducing side-effects
-    type Task;
+    type Task: fmt::Debug;
 
     /// Handle an intent
     ///
