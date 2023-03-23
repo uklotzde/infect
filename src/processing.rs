@@ -16,11 +16,16 @@ pub enum MessageProcessed<IntentRejected> {
     /// A message with an intent has been rejected
     IntentRejected(IntentRejected),
 
-    /// A message with an observed intent has been submitted or
-    /// a task has been spawned
+    /// The system is making progress
     ///
-    /// Indicates that more messages are expected to be received and
-    /// the message loop should continue.
+    /// New incoming messages are expected to arrive in the channel after
+    /// processing the last message. Otherwise the caller should decide if
+    /// continuing the message loop is desired or not.
+    ///
+    /// If rendering the model resulted in an observed intent the corresponding
+    /// message has been submitted and the message channel won't be empty. If a
+    /// task has been spawned then this task is expected to submit a message
+    /// eventually.
     Progressing,
 
     /// Not [`Self::Progressing`]
@@ -103,8 +108,10 @@ pub enum MessagesConsumed<IntentRejected> {
     /// The message channel is closed.
     ChannelClosed,
 
-    /// Processing the last message indicated that no progress has been made
-    /// and no next message is ready.
+    /// No progress observed after processing the last message from the channel
+    ///
+    /// This happens when the channel is empty and no task has been spawned
+    /// after processing the last message.
     NoProgress,
 }
 
@@ -113,6 +120,7 @@ pub enum MessagesConsumed<IntentRejected> {
 ///
 /// This `async fn` is _cancellation safe_. The only yield point occurs
 /// when receiving the next message from the channel.
+#[allow(clippy::manual_let_else)] // false positive?
 pub async fn consume_messages<M, R, T>(
     message_rx: &mut MessageReceiver<M::Intent, M::Effect>,
     task_context: &mut TaskContext<T, M::Intent, M::Effect>,
@@ -130,29 +138,41 @@ where
 {
     let mut next_message: Option<Message<M::Intent, M::Effect>> = None;
     loop {
-        if next_message.is_none() {
-            next_message = message_rx.next().await;
-        }
-        let Some(message) = next_message.take() else {
-            log::debug!("Stopping after message channel closed");
-            return MessagesConsumed::ChannelClosed;
+        let message = if let Some(next_message) = next_message.take() {
+            next_message
+        } else {
+            log::trace!("Awaiting next message");
+            let Some(next_message) = message_rx.next().await else {
+                log::debug!("Stopping after message channel closed");
+                return MessagesConsumed::ChannelClosed;
+            };
+            next_message
         };
-        log::debug!("Processing next message: {message:?}");
+        debug_assert!(next_message.is_none());
+        log::debug!("Processing message: {message:?}");
         match process_message(task_context, model, render_model, message) {
             MessageProcessed::IntentRejected(intent_rejected) => {
                 log::debug!("Stopping after intent rejected: {intent_rejected:?}");
                 return MessagesConsumed::IntentRejected(intent_rejected);
             }
-            MessageProcessed::Progressing => (),
+            MessageProcessed::Progressing => {
+                // Continue by awaiting the next message that is expected
+                // to arrive eventually
+            }
             MessageProcessed::NoProgress => {
                 next_message = match message_rx.try_next() {
-                    Ok(Some(message)) => Some(message),
+                    Ok(Some(next_message)) => Some(next_message),
                     Ok(None) => {
-                        log::debug!("Stopping after no progress made and message channel closed");
+                        log::debug!(
+                            "Stopping after no progress observed and message channel closed"
+                        );
                         return MessagesConsumed::ChannelClosed;
                     }
                     Err(_) => {
-                        log::debug!("Stopping after no progress made and no next message ready");
+                        // The message channel is empty but not closed
+                        log::debug!(
+                            "Stopping after no progress observed and no next message ready"
+                        );
                         return MessagesConsumed::NoProgress;
                     }
                 };
