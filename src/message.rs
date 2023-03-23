@@ -9,13 +9,10 @@
 /// Intents are supposed to happen (in the future), e.g. when submitting
 /// a command. When _rejected_ an intent doesn't result in any effects.
 /// When accepted it creates either an immediate effect or side-effects.
-/// Side-effects originate from concurrently executed _tasks_. Intents
-/// do not alter the current model state.
+/// Side-effects originate from concurrently executed _tasks_.
 ///
 /// Effects on the other hand are inevitable and cannot be ignored.
-/// An event is an effect that represents the observation of some
-/// undeniable fact. Effects must be handled by applying them to
-/// the current, mutable model state.
+/// Effects must be handled by applying them to the current, mutable model state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Message<Intent, Effect> {
     /// An intent
