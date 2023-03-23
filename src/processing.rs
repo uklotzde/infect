@@ -6,8 +6,8 @@ use std::fmt;
 use futures::StreamExt as _;
 
 use crate::{
-    task::TaskContext, EffectApplied, IntentAccepted, IntentHandled, Message, MessageReceiver,
-    Model, ModelChanged, ModelRender, TaskExecutor,
+    task::TaskContext, EffectApplied, IntentHandled, Message, MessageReceiver, Model, ModelChanged,
+    ModelRender, TaskExecutor,
 };
 
 /// Outcome of processing a single message
@@ -18,6 +18,9 @@ pub enum MessageProcessed<IntentRejected> {
 
     /// A message with an observed intent has been submitted or
     /// a task has been spawned
+    ///
+    /// Indicates that more messages are expected to be received and
+    /// the message loop should continue.
     Progressing,
 
     /// Not [`Self::Progressing`]
@@ -42,41 +45,26 @@ where
     T: TaskExecutor<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
 {
     let mut progressing = false;
-    let (effect, task) = match message {
+    let effect_applied = match message {
         Message::Intent(intent) => {
             log::debug!("Handling intent: {intent:?}");
             match model.handle_intent(intent) {
-                IntentHandled::Accepted(accepted) => {
-                    log::debug!("Intent accepted: {accepted:?}");
-                    match accepted {
-                        IntentAccepted::NoEffect => (None, None),
-                        IntentAccepted::ApplyEffect(effect) => (Some(effect), None),
-                        IntentAccepted::SpawnTask(task) => (None, Some(task)),
-                    }
-                }
+                IntentHandled::Accepted(effect_applied) => effect_applied,
                 IntentHandled::Rejected(intent_rejected) => {
                     log::debug!("Intent rejected: {intent_rejected:?}");
                     return MessageProcessed::IntentRejected(intent_rejected);
                 }
             }
         }
-        Message::Effect(effect) => (Some(effect), None),
+        Message::Effect(effect) => {
+            log::debug!("Applying effect: {effect:?}");
+            model.apply_effect(effect)
+        }
     };
-    let model_changed;
-    let task = if let Some(effect) = effect {
-        debug_assert!(task.is_none());
-        log::debug!("Applying effect: {effect:?}");
-        let effect_applied = model.apply_effect(effect);
-        let EffectApplied {
-            model_changed: model_changed_by_effect,
-            task,
-        } = effect_applied;
-        model_changed = model_changed_by_effect;
-        task
-    } else {
-        model_changed = ModelChanged::Unchanged;
-        task
-    };
+    let EffectApplied {
+        model_changed,
+        task,
+    } = effect_applied;
     if let Some(task) = task {
         log::debug!("Spawning task: {task:?}");
         task_context.spawn_task(task);
@@ -122,6 +110,9 @@ pub enum MessagesConsumed<IntentRejected> {
 
 /// Receive and process messages until one of the stop conditions are
 /// encountered
+///
+/// This `async fn` is _cancellation safe_. The only yield point occurs
+/// when receiving the next message from the channel.
 pub async fn consume_messages<M, R, T>(
     message_rx: &mut MessageReceiver<M::Intent, M::Effect>,
     task_context: &mut TaskContext<T, M::Intent, M::Effect>,

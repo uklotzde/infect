@@ -12,8 +12,8 @@
 
 A variation on the [Model-View-Intent (MVI)][mvi] and [State-Action-Model (SAM)][sam] paradigms using
 
-- _intents_ for user interaction,
-- (immediate) _effects_ for model changes,
+- _intents_ for rejecting or accepting user interaction and commands,
+- (immediate) _effects_ for updating the model according to observed events without feedback,
 - _tasks_ for inducing concurrent side-_effects_.
 
 [mvi]: https://hannesdorfmann.com/android/model-view-intent/ "Model-View-Intent (MVI)"

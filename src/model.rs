@@ -42,6 +42,13 @@ impl AddAssign for ModelChanged {
 }
 
 /// A stateful model
+///
+/// Recording the sequence of both accepted intents and applied events
+/// should be sufficient to reconstruct the model state from any given
+/// initial state. But only if all changes are deterministic and don't
+/// involve hidden side-effects like randomness, the current time, or
+/// any other input values that are obtained from an uncontrolled,
+/// outer system state.
 pub trait Model {
     /// An intent type that this model handles
     type Intent;
@@ -61,31 +68,24 @@ pub trait Model {
 
     /// Handle an intent
     ///
-    /// Intents are comparable to commands. If accepted they might
-    /// trigger (immediate) effects or side-effects.
+    /// Intents could either be accepted or rejected. When rejected the model
+    /// remains unchanged. When accepted the corresponding, implicit effect
+    /// is applied and its results are returned.
     ///
-    /// The model remains unchanged if an intent is rejected and
-    /// returned to the caller.
+    /// Rejecting an intent will temporarily handle control to the outer context,
+    /// i.e. the owner of the message loop. The rejection could be handled there
+    /// before continuing with the message loop.
     ///
-    /// Intent handlers should primarily check if it is safe and desired to
-    /// proceed with an effect. They should not anticipate the results
-    /// of applying the effect by implementing the business logic twice,
-    /// e.g. by checking if applying the effect subsequently would actually
-    /// change the model. This is the responsibility of the code that applies
-    /// effects. Shortcuts should only be implemented in rare cases when
-    /// constructing and then discarding a subsequent effect would be a
-    /// waste of resources.
+    /// See also:[`Self::apply_effect()`]
     #[must_use]
     fn handle_intent(
-        &self,
+        &mut self,
         intent: Self::Intent,
-    ) -> IntentHandled<Self::IntentRejected, Self::Effect, Self::Task>;
+    ) -> IntentHandled<Self::IntentRejected, Self::Task>;
 
-    /// Apply an effect on the model
+    /// Apply an effect to the model
     ///
-    /// Ideally, applying effects is deterministic. In this case recording
-    /// and replaying the sequence of effects is sufficient for reconstructing
-    /// each intermediate state of the model.
+    /// The resulting model must reflect all
     #[must_use]
     fn apply_effect(&mut self, effect: Self::Effect) -> EffectApplied<Self::Task>;
 }

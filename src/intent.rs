@@ -1,17 +1,19 @@
 // SPDX-FileCopyrightText: The infect authors
 // SPDX-License-Identifier: MPL-2.0
 
+use crate::EffectApplied;
+
 /// Outcome of handling an intent
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IntentHandled<Rejected, Effect, Task> {
+pub enum IntentHandled<Rejected, Task> {
     /// Intent has been rejected
     Rejected(Rejected),
 
-    /// Intent has been accepted
-    Accepted(IntentAccepted<Effect, Task>),
+    /// Intent has been accepted by applying an effect
+    Accepted(EffectApplied<Task>),
 }
 
-impl<Rejected, Effect, Task> IntentHandled<Rejected, Effect, Task> {
+impl<Rejected, Task> IntentHandled<Rejected, Task> {
     /// Reject an intent
     pub fn rejected<R>(rejected: R) -> Self
     where
@@ -21,98 +23,39 @@ impl<Rejected, Effect, Task> IntentHandled<Rejected, Effect, Task> {
     }
 
     /// Accept an intent
-    pub fn accepted<E, T>(accepted: IntentAccepted<E, T>) -> Self
+    pub fn accepted<E, T>(effect_applied: EffectApplied<T>) -> Self
     where
-        E: Into<Effect>,
         T: Into<Task>,
     {
-        Self::Accepted(IntentAccepted::map_from(accepted))
+        Self::Accepted(EffectApplied::map_from(effect_applied))
     }
 
     /// Map from a differently parameterized type
-    pub fn map_from<R, E, T>(from: IntentHandled<R, E, T>) -> Self
+    pub fn map_from<R, T>(from: IntentHandled<R, T>) -> Self
     where
         R: Into<Rejected>,
-        E: Into<Effect>,
         T: Into<Task>,
     {
         match from {
             IntentHandled::Rejected(rejected) => Self::Rejected(rejected.into()),
-            IntentHandled::Accepted(accepted) => Self::Accepted(IntentAccepted::map_from(accepted)),
+            IntentHandled::Accepted(effect_applied) => {
+                Self::Accepted(EffectApplied::map_from(effect_applied))
+            }
         }
     }
 
     /// Map into a differently parameterized type
-    pub fn map_into<R, E, T>(self) -> IntentHandled<R, E, T>
+    pub fn map_into<R, T>(self) -> IntentHandled<R, T>
     where
         R: From<Rejected>,
-        E: From<Effect>,
         T: From<Task>,
     {
         IntentHandled::map_from(self)
     }
 }
 
-/// The result of accepting an intent
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IntentAccepted<Effect, Task> {
-    /// No changes needed
-    ///
-    /// Use this variant with caution. The intent handler should avoid
-    /// to anticipate the result of applying an effect. If creating the
-    /// subsequent event is cheap then better let the effect decide if
-    /// the model needs to be changed or not.
-    NoEffect,
-
-    /// Apply an effect
-    ApplyEffect(Effect),
-
-    /// Induce side-effects by spawning a task
-    SpawnTask(Task),
-}
-
-impl<Effect, Task> IntentAccepted<Effect, Task> {
-    /// Map from a differently parameterized type
-    pub fn map_from<E, T>(from: IntentAccepted<E, T>) -> Self
-    where
-        E: Into<Effect>,
-        T: Into<Task>,
-    {
-        match from {
-            IntentAccepted::NoEffect => Self::NoEffect,
-            IntentAccepted::ApplyEffect(effect) => Self::ApplyEffect(effect.into()),
-            IntentAccepted::SpawnTask(task) => Self::SpawnTask(task.into()),
-        }
-    }
-
-    /// Map into a differently parameterized type
-    pub fn map_into<E, T>(self) -> IntentAccepted<E, T>
-    where
-        E: From<Effect>,
-        T: From<Task>,
-    {
-        IntentAccepted::map_from(self)
-    }
-}
-
-impl<Effect, Task> IntentAccepted<Effect, Task> {
-    /// Apply an effect
-    #[must_use]
-    pub fn apply_effect(effect: impl Into<Effect>) -> Self {
-        Self::ApplyEffect(effect.into())
-    }
-
-    /// Spawn a task
-    #[must_use]
-    pub fn spawn_task(task: impl Into<Task>) -> Self {
-        Self::SpawnTask(task.into())
-    }
-}
-
-impl<Rejected, Effect, Task> From<IntentAccepted<Effect, Task>>
-    for IntentHandled<Rejected, Effect, Task>
-{
-    fn from(accepted: IntentAccepted<Effect, Task>) -> Self {
-        IntentHandled::Accepted(accepted)
+impl<Rejected, Task> From<EffectApplied<Task>> for IntentHandled<Rejected, Task> {
+    fn from(effect_applied: EffectApplied<Task>) -> Self {
+        IntentHandled::Accepted(effect_applied)
     }
 }

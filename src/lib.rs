@@ -24,7 +24,7 @@ mod effect;
 pub use self::effect::EffectApplied;
 
 mod intent;
-pub use self::intent::{IntentAccepted, IntentHandled};
+pub use self::intent::IntentHandled;
 
 mod message;
 pub use self::message::Message;
