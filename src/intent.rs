@@ -47,7 +47,7 @@ impl<Rejected, Task, ModelRenderHint> IntentHandled<Rejected, Task, ModelRenderH
     }
 
     /// Map into a differently parameterized type
-    pub fn map_int<R, T, M>(self) -> IntentHandled<R, T, M>
+    pub fn map_into<R, T, M>(self) -> IntentHandled<R, T, M>
     where
         R: From<Rejected>,
         T: From<Task>,
