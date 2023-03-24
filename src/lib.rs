@@ -35,7 +35,7 @@ pub use self::messaging::{
 };
 
 mod model;
-pub use self::model::{Model, ModelChanged, ModelRender};
+pub use self::model::{Model, ModelChanged, ModelRender, ModelRenderHint};
 
 mod processing;
 pub use self::processing::{consume_messages, process_message, MessageProcessed, MessagesConsumed};

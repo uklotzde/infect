@@ -6,8 +6,8 @@ use std::fmt;
 use futures::StreamExt as _;
 
 use crate::{
-    task::TaskContext, EffectApplied, IntentHandled, Message, MessageReceiver, Model, ModelChanged,
-    ModelRender, TaskExecutor,
+    task::TaskContext, EffectApplied, IntentHandled, Message, MessageReceiver, Model, ModelRender,
+    ModelRenderHint, TaskExecutor,
 };
 
 /// Outcome of processing a single message
@@ -66,30 +66,24 @@ where
             model.apply_effect(effect)
         }
     };
-    let EffectApplied {
-        model_changed,
-        task,
-    } = effect_applied;
+    let EffectApplied { render_hint, task } = effect_applied;
     if let Some(task) = task {
         log::debug!("Spawning task: {task:?}");
         task_context.spawn_task(task);
         progressing = true;
     }
-    match model_changed {
-        ModelChanged::Unchanged => {
-            // Skip rendering
-        }
-        ModelChanged::MaybeChanged => {
-            log::debug!("Rendering model: {model:?}");
-            if let Some(observed_intent) = render_model.render_model(model) {
-                log::debug!("Observed intent after rendering model: {observed_intent:?}");
-                // The corresponding message is enqueued like any other message, i.e.
-                // not processed immediately during this turn!
-                task_context.submit_intent(observed_intent);
-                progressing = true;
-            }
+
+    if render_hint.should_render_model() {
+        log::debug!("Rendering model: {model:?}");
+        if let Some(observed_intent) = render_model.render_model(model, render_hint) {
+            log::debug!("Observed intent after rendering model: {observed_intent:?}");
+            // The corresponding message is enqueued like any other message, i.e.
+            // not processed immediately during this turn!
+            task_context.submit_intent(observed_intent);
+            progressing = true;
         }
     }
+
     if progressing {
         MessageProcessed::Progressing
     } else {
