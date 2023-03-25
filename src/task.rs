@@ -72,10 +72,16 @@ pub trait TaskExecutor<T> {
 
     /// Spawns a task
     ///
-    /// The spawned task is executed concurrently, e.g. by spawning
-    /// an asynchronous task on some executor.
+    /// Spawned tasks can either be executed synchronously on the current
+    /// thread or asynchronously by spawning an asynchronous task on some
+    /// executor.
     ///
-    /// Tasks can send messages and spawn new tasks through `context`.
+    /// Synchronous tasks will block the message processing thread and
+    /// should only be used for non-blocking operations, e.g. emitting
+    /// events for external observers.
+    ///
+    /// Tasks can submit (feedback) messages for triggering side-effects
+    /// and spawn new (sub-)tasks through `context`.
     fn spawn_task(&self, context: TaskContext<T, Self::Intent, Self::Effect>, task: Self::Task);
 }
 
