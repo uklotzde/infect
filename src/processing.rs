@@ -73,6 +73,8 @@ where
         progressing = true;
     }
 
+    // Verify that the trait implements the contract as documented.
+    debug_assert!(!M::RenderHint::default().should_render_model());
     if render_hint.should_render_model() {
         log::debug!("Rendering model: {model:?}");
         if let Some(observed_intent) = render_model.render_model(model, render_hint) {

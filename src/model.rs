@@ -91,8 +91,10 @@ pub trait ModelRender {
 /// Control rendering after applying effects
 ///
 /// Rendering hints are additive, e.g. like a bloom filter.
-pub trait ModelRenderHint: Sized + Add + AddAssign {
+pub trait ModelRenderHint: Sized + Add + AddAssign + Default {
     /// Decide if the model needs to be rendered after applying an effect
+    ///
+    /// Must return `false` for the default value!
     fn should_render_model(&self) -> bool;
 }
 
@@ -100,7 +102,7 @@ pub trait ModelRenderHint: Sized + Add + AddAssign {
 ///
 /// The most basic implementation of [`ModelRenderHint`] that might be
 /// sufficient for many cases and could be used as a default.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ModelChanged {
     /// The model has not changed
     ///
@@ -108,6 +110,7 @@ pub enum ModelChanged {
     /// no changes are observable and rendering could be skipped. If unsure
     /// or when in doubt return [`Self::MaybeChanged`] to re-render the
     /// model.
+    #[default]
     Unchanged,
 
     /// The model might have changed and needs to be re-rendered
