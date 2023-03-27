@@ -64,3 +64,39 @@ impl<Rejected, Task, ModelRenderHint> From<EffectApplied<Task, ModelRenderHint>>
         IntentHandled::Accepted(effect_applied)
     }
 }
+
+/// Isomorphic representation of [`IntentHandled`] as a  [`Result`].
+///
+/// [`IntentHandled`] can be converted seamlessly from and into this result type.
+pub type IntentHandledResult<Rejected, Task, ModelRenderHint> =
+    Result<EffectApplied<Task, ModelRenderHint>, Rejected>;
+
+impl<Rejected, Task, ModelRenderHint, R, T, M> From<IntentHandledResult<R, T, M>>
+    for IntentHandled<Rejected, Task, ModelRenderHint>
+where
+    R: Into<Rejected>,
+    Task: From<T>,
+    ModelRenderHint: From<M>,
+{
+    fn from(res: IntentHandledResult<R, T, M>) -> Self {
+        match res {
+            Ok(effect_applied) => Self::Accepted(effect_applied.map_into()),
+            Err(intent_rejected) => Self::Rejected(intent_rejected.into()),
+        }
+    }
+}
+
+impl<Rejected, Task, ModelRenderHint, R, T, M> From<IntentHandled<R, T, M>>
+    for IntentHandledResult<Rejected, Task, ModelRenderHint>
+where
+    R: Into<Rejected>,
+    Task: From<T>,
+    ModelRenderHint: From<M>,
+{
+    fn from(intent_handled: IntentHandled<R, T, M>) -> Self {
+        match intent_handled {
+            IntentHandled::Accepted(effect_applied) => Ok(effect_applied.map_into()),
+            IntentHandled::Rejected(rejected) => Err(rejected.into()),
+        }
+    }
+}
