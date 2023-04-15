@@ -38,7 +38,7 @@ pub fn process_message<M, R, T>(
     task_context: &mut TaskContext<T, M::Intent, M::Effect>,
     model: &mut M,
     render_model: &mut R,
-    message: Message<M::Intent, M::Effect>,
+    mut message: Message<M::Intent, M::Effect>,
 ) -> MessageProcessed<M::IntentRejected>
 where
     M: Model + fmt::Debug,
@@ -50,39 +50,53 @@ where
     T: TaskExecutor<T, Intent = M::Intent, Effect = M::Effect, Task = M::Task> + Clone,
 {
     let mut progressing = false;
-    let effect_applied = match message {
-        Message::Intent(intent) => {
-            log::debug!("Handling intent: {intent:?}");
-            match model.handle_intent(intent) {
-                IntentHandled::Accepted(effect_applied) => effect_applied,
-                IntentHandled::Rejected(intent_rejected) => {
-                    log::debug!("Intent rejected: {intent_rejected:?}");
-                    return MessageProcessed::IntentRejected(intent_rejected);
+
+    loop {
+        let effect_applied = match message {
+            Message::Intent(intent) => {
+                log::debug!("Handling intent: {intent:?}");
+                match model.handle_intent(intent) {
+                    IntentHandled::Accepted(effect_applied) => effect_applied,
+                    IntentHandled::Rejected(intent_rejected) => {
+                        log::debug!("Intent rejected: {intent_rejected:?}");
+                        return MessageProcessed::IntentRejected(intent_rejected);
+                    }
                 }
             }
-        }
-        Message::Effect(effect) => {
-            log::debug!("Applying effect: {effect:?}");
-            model.apply_effect(effect)
-        }
-    };
-    let EffectApplied { render_hint, task } = effect_applied;
-    if let Some(task) = task {
-        log::debug!("Spawning task: {task:?}");
-        task_context.spawn_task(task);
-        progressing = true;
-    }
-
-    // Verify that the trait implements the contract as documented.
-    debug_assert!(!M::RenderHint::default().should_render_model());
-    if render_hint.should_render_model() {
-        log::debug!("Rendering model: {model:?}");
-        if let Some(observed_intent) = render_model.render_model(model, render_hint) {
-            log::debug!("Observed intent after rendering model: {observed_intent:?}");
-            // The corresponding message is enqueued like any other message, i.e.
-            // not processed immediately during this turn!
-            task_context.submit_intent(observed_intent);
+            Message::Effect(effect) => {
+                log::debug!("Applying effect: {effect:?}");
+                model.apply_effect(effect)
+            }
+        };
+        let EffectApplied {
+            task,
+            render_hint,
+            next_effect,
+        } = effect_applied;
+        if let Some(task) = task {
+            log::debug!("Spawning task: {task:?}");
+            task_context.spawn_task(task);
             progressing = true;
+        }
+
+        // Verify that the trait implements the contract as documented.
+        debug_assert!(!M::RenderHint::default().should_render_model());
+        if render_hint.should_render_model() {
+            log::debug!("Rendering model: {model:?}");
+            if let Some(observed_intent) = render_model.render_model(model, render_hint) {
+                log::debug!("Observed intent after rendering model: {observed_intent:?}");
+                // The corresponding message is enqueued like any other message,
+                // i.e. not processed immediately during this turn!
+                task_context.submit_intent(observed_intent);
+                progressing = true;
+            }
+        }
+        if let Some(effect) = next_effect {
+            message = Message::Effect(effect);
+            // Immediately continue processing the message with the next effect
+            // before any other, enqueued messages.
+        } else {
+            break;
         }
     }
 

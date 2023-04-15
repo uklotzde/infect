@@ -56,14 +56,16 @@ pub trait Model {
     fn handle_intent(
         &mut self,
         intent: Self::Intent,
-    ) -> IntentHandled<Self::IntentRejected, Self::Task, Self::RenderHint>;
+    ) -> IntentHandled<Self::IntentRejected, Self::Effect, Self::Task, Self::RenderHint>;
 
     /// Apply an effect to the model
     ///
     /// The resulting model must reflect all
     #[must_use]
-    fn apply_effect(&mut self, effect: Self::Effect)
-        -> EffectApplied<Self::Task, Self::RenderHint>;
+    fn apply_effect(
+        &mut self,
+        effect: Self::Effect,
+    ) -> EffectApplied<Self::Effect, Self::Task, Self::RenderHint>;
 }
 
 /// Render the model after changed

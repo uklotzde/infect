@@ -4,7 +4,7 @@
 [package]
 name = "infect"
 description = "Intent/effect/task - A variation on the Model View Intent (MVI) paradigm"
-version = "0.0.26"
+version = "0.0.27"
 license = "MPL-2.0"
 readme = "README.md"
 repository = "https://github.com/uklotzde/infect"
@@ -14,5 +14,5 @@ edition = "2021"
 include = ["/src", "/README.md", "/LICENSES"]
 
 [dependencies]
-futures = { version = "0.3.27", default-features = false, features = ["std"] }
+futures = { version = "0.3.28", default-features = false, features = ["std"] }
 log = "0.4.17"
