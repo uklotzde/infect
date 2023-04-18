@@ -21,13 +21,11 @@ pub struct EffectApplied<Effect, Task, ModelRenderHint> {
     pub next_effect: Option<Effect>,
 }
 
-impl<Effect, Task, ModelRenderHint> EffectApplied<Effect, Task, ModelRenderHint>
+impl<Effect, Task, ModelRenderHint> Default for EffectApplied<Effect, Task, ModelRenderHint>
 where
     ModelRenderHint: crate::ModelRenderHint,
 {
-    /// Mark the model as unchanged
-    #[must_use]
-    pub fn unchanged() -> Self {
+    fn default() -> Self {
         let render_hint = ModelRenderHint::default();
         debug_assert!(!render_hint.should_render_model());
         Self {
@@ -35,6 +33,17 @@ where
             task: None,
             next_effect: None,
         }
+    }
+}
+
+impl<Effect, Task, ModelRenderHint> EffectApplied<Effect, Task, ModelRenderHint>
+where
+    ModelRenderHint: crate::ModelRenderHint,
+{
+    /// Mark the model as unchanged
+    #[must_use]
+    pub fn unchanged() -> Self {
+        Default::default()
     }
 
     /// Mark the model as unchanged and dispatch a task
