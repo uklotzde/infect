@@ -6,11 +6,11 @@ use crate::ModelChanged;
 /// Outcome of applying an effect to the model
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EffectApplied<Effect, Task, ModelRenderHint> {
-    /// A follow-up task for triggering side-effects
-    pub task: Option<Task>,
-
     /// A hint for rendering the model
     pub render_hint: ModelRenderHint,
+
+    /// A follow-up task for triggering side-effects
+    pub task: Option<Task>,
 
     /// A follow-up effect that will be processed before any queued effects
     ///
@@ -24,47 +24,73 @@ pub struct EffectApplied<Effect, Task, ModelRenderHint> {
 impl<Effect, Task> EffectApplied<Effect, Task, ModelChanged> {
     /// Mark the model as unchanged
     #[must_use]
-    pub fn unchanged<T>(task: impl Into<Option<T>>) -> Self
-    where
-        T: Into<Task>,
-    {
+    pub const fn unchanged() -> Self {
         Self {
-            task: task.into().map(Into::into),
             render_hint: ModelChanged::Unchanged,
+            task: None,
             next_effect: None,
         }
     }
 
-    /// Mark the model as unchanged without a next task
+    /// Mark the model as unchanged and dispatch a task
     #[must_use]
-    pub const fn unchanged_done() -> Self {
+    pub fn unchanged_task<T>(task: impl Into<Option<T>>) -> Self
+    where
+        T: Into<Task>,
+    {
         Self {
-            task: None,
             render_hint: ModelChanged::Unchanged,
+            task: task.into().map(Into::into),
             next_effect: None,
+        }
+    }
+
+    /// Mark the model as unchanged and apply a next effect
+    #[must_use]
+    pub fn unchanged_next<E>(next_effect: impl Into<Option<E>>) -> Self
+    where
+        E: Into<Effect>,
+    {
+        Self {
+            render_hint: ModelChanged::Unchanged,
+            task: None,
+            next_effect: next_effect.into().map(Into::into),
         }
     }
 
     /// Mark the model as maybe changed
     #[must_use]
-    pub fn maybe_changed<T>(task: impl Into<Option<T>>) -> Self
-    where
-        T: Into<Task>,
-    {
+    pub const fn maybe_changed() -> Self {
         Self {
-            task: task.into().map(Into::into),
+            task: None,
             render_hint: ModelChanged::MaybeChanged,
             next_effect: None,
         }
     }
 
-    /// Mark the model as maybe changed without a next task
+    /// Mark the model as maybe changed and dispatch a task
     #[must_use]
-    pub const fn maybe_changed_done() -> Self {
+    pub fn maybe_changed_task<T>(task: impl Into<Option<T>>) -> Self
+    where
+        T: Into<Task>,
+    {
         Self {
-            task: None,
             render_hint: ModelChanged::MaybeChanged,
+            task: task.into().map(Into::into),
             next_effect: None,
+        }
+    }
+
+    /// Mark the model as maybe changed and apply a next effect
+    #[must_use]
+    pub fn maybe_changed_next<E>(next_effect: impl Into<Option<E>>) -> Self
+    where
+        E: Into<Effect>,
+    {
+        Self {
+            render_hint: ModelChanged::Unchanged,
+            task: None,
+            next_effect: next_effect.into().map(Into::into),
         }
     }
 }
@@ -82,12 +108,12 @@ impl<Effect, Task, ModelRenderHint> EffectApplied<Effect, Task, ModelRenderHint>
             task,
             next_effect,
         } = from;
-        let task = task.map(Into::into);
         let render_hint = render_hint.into();
+        let task = task.map(Into::into);
         let next_effect = next_effect.map(Into::into);
         Self {
-            task,
             render_hint,
+            task,
             next_effect,
         }
     }
