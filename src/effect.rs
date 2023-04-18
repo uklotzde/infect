@@ -21,12 +21,17 @@ pub struct EffectApplied<Effect, Task, ModelRenderHint> {
     pub next_effect: Option<Effect>,
 }
 
-impl<Effect, Task> EffectApplied<Effect, Task, ModelChanged> {
+impl<Effect, Task, ModelRenderHint> EffectApplied<Effect, Task, ModelRenderHint>
+where
+    ModelRenderHint: crate::ModelRenderHint,
+{
     /// Mark the model as unchanged
     #[must_use]
-    pub const fn unchanged() -> Self {
+    pub fn unchanged() -> Self {
+        let render_hint = ModelRenderHint::default();
+        debug_assert!(!render_hint.should_render_model());
         Self {
-            render_hint: ModelChanged::Unchanged,
+            render_hint: Default::default(),
             task: None,
             next_effect: None,
         }
@@ -39,9 +44,8 @@ impl<Effect, Task> EffectApplied<Effect, Task, ModelChanged> {
         T: Into<Task>,
     {
         Self {
-            render_hint: ModelChanged::Unchanged,
             task: task.into().map(Into::into),
-            next_effect: None,
+            ..Self::unchanged()
         }
     }
 
@@ -52,18 +56,19 @@ impl<Effect, Task> EffectApplied<Effect, Task, ModelChanged> {
         E: Into<Effect>,
     {
         Self {
-            render_hint: ModelChanged::Unchanged,
-            task: None,
             next_effect: next_effect.into().map(Into::into),
+            ..Self::unchanged()
         }
     }
+}
 
+impl<Effect, Task> EffectApplied<Effect, Task, ModelChanged> {
     /// Mark the model as maybe changed
     #[must_use]
     pub const fn maybe_changed() -> Self {
         Self {
-            task: None,
             render_hint: ModelChanged::MaybeChanged,
+            task: None,
             next_effect: None,
         }
     }
@@ -75,9 +80,8 @@ impl<Effect, Task> EffectApplied<Effect, Task, ModelChanged> {
         T: Into<Task>,
     {
         Self {
-            render_hint: ModelChanged::MaybeChanged,
             task: task.into().map(Into::into),
-            next_effect: None,
+            ..Self::maybe_changed()
         }
     }
 
@@ -88,9 +92,8 @@ impl<Effect, Task> EffectApplied<Effect, Task, ModelChanged> {
         E: Into<Effect>,
     {
         Self {
-            render_hint: ModelChanged::Unchanged,
-            task: None,
             next_effect: next_effect.into().map(Into::into),
+            ..Self::maybe_changed()
         }
     }
 }
