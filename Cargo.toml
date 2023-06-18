@@ -15,4 +15,4 @@ include = ["/src", "/README.md", "/LICENSES"]
 
 [dependencies]
 futures = { version = "0.3.28", default-features = false, features = ["std"] }
-log = "0.4.17"
+log = "0.4.19"
