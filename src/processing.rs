@@ -3,7 +3,7 @@
 
 use std::fmt;
 
-use futures::StreamExt as _;
+use futures_util::StreamExt as _;
 
 use crate::{
     task::TaskContext, EffectApplied, IntentHandled, Message, MessageReceiver, Model, ModelRender,

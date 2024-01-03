@@ -3,7 +3,7 @@
 
 use std::fmt;
 
-use futures::channel::mpsc;
+use futures_channel::mpsc;
 
 use crate::Message;
 

@@ -7,7 +7,7 @@
 [![Docs.rs](https://docs.rs/infect/badge.svg)](https://docs.rs/infect)
 [![Deps.rs](https://deps.rs/repo/github/uklotzde/infect/status.svg)](https://deps.rs/repo/github/uklotzde/infect)
 [![Security audit](https://github.com/uklotzde/infect/actions/workflows/security-audit.yaml/badge.svg)](https://github.com/uklotzde/infect/actions/workflows/security-audit.yaml)
-[![Continuous integration](https://github.com/uklotzde/infect/actions/workflows/continuous-integration.yaml/badge.svg)](https://github.com/uklotzde/infect/actions/workflows/continuous-integration.yaml)
+[![Continuous integration](https://github.com/uklotzde/infect/actions/workflows/build-and-test.yaml/badge.svg)](https://github.com/uklotzde/infect/actions/workflows/build-and-test.yaml)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
 A variation on the [Model-View-Intent (MVI)][mvi] and [State-Action-Model (SAM)][sam] paradigms using
